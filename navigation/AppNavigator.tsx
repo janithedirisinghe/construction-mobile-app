@@ -8,8 +8,10 @@ import { RootStackParamList } from '../types/navigation';
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { RegisterScreen } from '../screens/auth/RegisterScreen';
 
-// Project Screens
-import { ProjectListScreen } from '../screens/projects/ProjectListScreen';
+// Main Tab Navigator
+import { MainTabNavigator } from './MainTabNavigator';
+
+// Project Screens (accessible from Home tab)
 import { CreateProjectScreen } from '../screens/projects/CreateProjectScreen';
 import { DashboardScreen } from '../screens/projects/DashboardScreen';
 
@@ -24,7 +26,7 @@ export const AppNavigator: React.FC = () => {
   return (
     <NavigationContainer>
       <Stack.Navigator 
-        initialRouteName="ProjectList"
+        initialRouteName="MainTabs"
         screenOptions={{
           headerShown: false,
         }}
@@ -33,8 +35,10 @@ export const AppNavigator: React.FC = () => {
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
         
-        {/* Project Screens */}
-        <Stack.Screen name="ProjectList" component={ProjectListScreen} />
+        {/* Main Tab Navigator */}
+        <Stack.Screen name="MainTabs" component={MainTabNavigator} />
+        
+        {/* Project Screens (accessible from Home tab) */}
         <Stack.Screen name="CreateProject" component={CreateProjectScreen} />
         <Stack.Screen name="Dashboard" component={DashboardScreen} />
         

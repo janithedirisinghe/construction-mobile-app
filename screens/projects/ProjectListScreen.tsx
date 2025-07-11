@@ -3,15 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { FlatList, TouchableOpacity, TextInput } from 'react-native';
 import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
-import { ProjectListScreenNavigationProp } from '../../types/navigation';
+import { useNavigation } from '@react-navigation/native';
+import { HomeScreenNavigationProp } from '../../types/navigation';
 import { Project } from '../../types/project';
 import { Screen } from '../../components/common/Screen';
 import { Card } from '../../components/common/Card';
 import { colors, spacing, typography, borderRadius, shadows } from '../../theme';
-
-interface Props {
-  navigation: ProjectListScreenNavigationProp;
-}
 
 const Header = styled.View`
   background-color: ${colors.white};
@@ -199,7 +196,8 @@ const mockProjects: Project[] = [
   },
 ];
 
-export const ProjectListScreen: React.FC<Props> = ({ navigation }) => {
+export const ProjectListScreen: React.FC = () => {
+  const navigation = useNavigation<HomeScreenNavigationProp>();
   const [projects, setProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -300,7 +298,7 @@ export const ProjectListScreen: React.FC<Props> = ({ navigation }) => {
   );
 
   return (
-    <Screen>
+    <Screen includeTabBarPadding={true}>
       <Header>
         <WelcomeSection>
           <WelcomeText>Welcome back,</WelcomeText>
@@ -329,12 +327,7 @@ export const ProjectListScreen: React.FC<Props> = ({ navigation }) => {
         </SearchSection>
 
         <ActionButtons>
-          <ActionButton variant="secondary">
-            <Ionicons name="analytics" size={16} color={colors.gray[700]} />
-            <ActionButtonText variant="secondary">Analytics</ActionButtonText>
-          </ActionButton>
-          
-          <ActionButton variant="primary" onPress={() => navigation.navigate('CreateProject')}>
+          <ActionButton variant="primary" onPress={() => navigation.navigate('CreateProject')} style={{ marginHorizontal: 0 }}>
             <Ionicons name="add" size={16} color={colors.white} />
             <ActionButtonText variant="primary">New Project</ActionButtonText>
           </ActionButton>
