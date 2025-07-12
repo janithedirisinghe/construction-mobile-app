@@ -1,6 +1,6 @@
 // screens/projects/DashboardScreen.tsx
 import React, { useState, useEffect } from 'react';
-import { FlatList, TouchableOpacity, Alert } from 'react-native';
+import { FlatList, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
 import { DashboardScreenNavigationProp, DashboardScreenRouteProp } from '../../types/navigation';
@@ -352,28 +352,6 @@ export const DashboardScreen: React.FC<Props> = ({ navigation, route }) => {
     });
   };
 
-  const renderExpense = ({ item }: { item: Expense }) => (
-    <TouchableOpacity onPress={() => handleExpensePress(item)}>
-      <ExpenseCard>
-        <ExpenseHeader>
-          <ExpenseName>{item.title}</ExpenseName>
-          <ExpenseAmount>{formatCurrency(item.amount)}</ExpenseAmount>
-        </ExpenseHeader>
-        <ExpenseDetails>
-          <ExpenseCategory>{item.category}</ExpenseCategory>
-          <ExpenseDate>{formatDate(item.expenseDate)}</ExpenseDate>
-        </ExpenseDetails>
-      </ExpenseCard>
-    </TouchableOpacity>
-  );
-
-  const renderEmptyExpenses = () => (
-    <EmptyContainer>
-      <Ionicons name="receipt-outline" size={64} color={colors.gray[400]} />
-      <EmptyText>No expenses recorded yet.{'\n'}Add your first expense!</EmptyText>
-    </EmptyContainer>
-  );
-
   if (loading || !project) {
     return (
       <Screen>
@@ -390,91 +368,107 @@ export const DashboardScreen: React.FC<Props> = ({ navigation, route }) => {
 
   return (
     <Screen>
-      <Header>
-        <HeaderContent>
-          <BackButton onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color={colors.gray[900]} />
-          </BackButton>
-          <HeaderText>
-            <Title>Project Details</Title>
-            <Subtitle>Monitor progress and expenses</Subtitle>
-          </HeaderText>
-          <Spacer />
-        </HeaderContent>
-      </Header>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <Header>
+          <HeaderContent>
+            <BackButton onPress={() => navigation.goBack()}>
+              <Ionicons name="arrow-back" size={24} color={colors.gray[900]} />
+            </BackButton>
+            <HeaderText>
+              <Title>Project Details</Title>
+              <Subtitle>Monitor progress and expenses</Subtitle>
+            </HeaderText>
+            <Spacer />
+          </HeaderContent>
+        </Header>
 
-      <ProjectCard>
-        <ProjectHeader>
-          <ProjectName>{project.title}</ProjectName>
-          <ProjectDates>
-            {formatDate(project.startDate)} - {formatDate(project.endDate)}
-          </ProjectDates>
-        </ProjectHeader>
+        <ProjectCard>
+          <ProjectHeader>
+            <ProjectName>{project.title}</ProjectName>
+            <ProjectDates>
+              {formatDate(project.startDate)} - {formatDate(project.endDate)}
+            </ProjectDates>
+          </ProjectHeader>
 
-        <BudgetSection>
-          <BudgetItem>
-            <BudgetLabel>Budget</BudgetLabel>
-            <BudgetValue>{formatCurrency(project.targetBudget)}</BudgetValue>
-          </BudgetItem>
-          <BudgetItem>
-            <BudgetLabel>Spent</BudgetLabel>
-            <BudgetValue>{formatCurrency(project.totalSpent || 0)}</BudgetValue>
-          </BudgetItem>
-          <BudgetItem>
-            <BudgetLabel>Remaining</BudgetLabel>
-            <BudgetValue style={{ color: remaining < 0 ? colors.error : colors.success }}>
-              {formatCurrency(remaining)}
-            </BudgetValue>
-          </BudgetItem>
-        </BudgetSection>
+          <BudgetSection>
+            <BudgetItem>
+              <BudgetLabel>Budget</BudgetLabel>
+              <BudgetValue>{formatCurrency(project.targetBudget)}</BudgetValue>
+            </BudgetItem>
+            <BudgetItem>
+              <BudgetLabel>Spent</BudgetLabel>
+              <BudgetValue>{formatCurrency(project.totalSpent || 0)}</BudgetValue>
+            </BudgetItem>
+            <BudgetItem>
+              <BudgetLabel>Remaining</BudgetLabel>
+              <BudgetValue style={{ color: remaining < 0 ? colors.error : colors.success }}>
+                {formatCurrency(remaining)}
+              </BudgetValue>
+            </BudgetItem>
+          </BudgetSection>
 
-        <ProgressContainer>
-          <ProgressLabel>
-            <ProgressText>Budget Progress</ProgressText>
-            <ProgressText>{progress.toFixed(1)}%</ProgressText>
-          </ProgressLabel>
-          <ProgressBar>
-            <ProgressFill percentage={progress} />
-          </ProgressBar>
-        </ProgressContainer>
-      </ProjectCard>
+          <ProgressContainer>
+            <ProgressLabel>
+              <ProgressText>Budget Progress</ProgressText>
+              <ProgressText>{progress.toFixed(1)}%</ProgressText>
+            </ProgressLabel>
+            <ProgressBar>
+              <ProgressFill percentage={progress} />
+            </ProgressBar>
+          </ProgressContainer>
+        </ProjectCard>
 
-      <QuickActionsSection>
-        <SectionTitle>Quick Actions</SectionTitle>
-        <ActionRow>
-          <ActionButton onPress={handleAddExpense}>
-            <ActionIcon>
-              <Ionicons name="receipt-outline" size={24} color={colors.primary} />
-            </ActionIcon>
-            <ActionText>Add{'\n'}Expense</ActionText>
-          </ActionButton>
-          
-          <ActionButton onPress={handleLaborManagement}>
-            <ActionIcon>
-              <Ionicons name="people-outline" size={24} color={colors.primary} />
-            </ActionIcon>
-            <ActionText>Manage{'\n'}Labor</ActionText>
-          </ActionButton>
-          
-          <ActionButton onPress={handleDailyAttendance}>
-            <ActionIcon>
-              <Ionicons name="checkmark-circle-outline" size={24} color={colors.primary} />
-            </ActionIcon>
-            <ActionText>Mark{'\n'}Attendance</ActionText>
-          </ActionButton>
-        </ActionRow>
-      </QuickActionsSection>
+        <QuickActionsSection>
+          <SectionTitle>Quick Actions</SectionTitle>
+          <ActionRow>
+            <ActionButton onPress={handleAddExpense}>
+              <ActionIcon>
+                <Ionicons name="receipt-outline" size={24} color={colors.primary} />
+              </ActionIcon>
+              <ActionText>Add{'\n'}Expense</ActionText>
+            </ActionButton>
+            
+            <ActionButton onPress={handleLaborManagement}>
+              <ActionIcon>
+                <Ionicons name="people-outline" size={24} color={colors.primary} />
+              </ActionIcon>
+              <ActionText>Manage{'\n'}Labor</ActionText>
+            </ActionButton>
+            
+            <ActionButton onPress={handleDailyAttendance}>
+              <ActionIcon>
+                <Ionicons name="checkmark-circle-outline" size={24} color={colors.primary} />
+              </ActionIcon>
+              <ActionText>Mark{'\n'}Attendance</ActionText>
+            </ActionButton>
+          </ActionRow>
+        </QuickActionsSection>
 
-      <ExpensesSection>
-        <SectionTitle>Recent Expenses</SectionTitle>
-        <FlatList
-          data={expenses}
-          renderItem={renderExpense}
-          keyExtractor={item => item.id.toString()}
-          ListEmptyComponent={renderEmptyExpenses}
-          showsVerticalScrollIndicator={false}
-        />
-      </ExpensesSection>
+        <ExpensesSection>
+          <SectionTitle>Recent Expenses</SectionTitle>
+          {expenses.length > 0 ? (
+            expenses.map((item) => (
+              <TouchableOpacity key={item.id} onPress={() => handleExpensePress(item)}>
+                <ExpenseCard>
+                  <ExpenseHeader>
+                    <ExpenseName>{item.title}</ExpenseName>
+                    <ExpenseAmount>{formatCurrency(item.amount)}</ExpenseAmount>
+                  </ExpenseHeader>
+                  <ExpenseDetails>
+                    <ExpenseCategory>{item.category}</ExpenseCategory>
+                    <ExpenseDate>{formatDate(item.expenseDate)}</ExpenseDate>
+                  </ExpenseDetails>
+                </ExpenseCard>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <EmptyContainer>
+              <Ionicons name="receipt-outline" size={64} color={colors.gray[400]} />
+              <EmptyText>No expenses recorded yet.{'\n'}Add your first expense!</EmptyText>
+            </EmptyContainer>
+          )}
+        </ExpensesSection>
+      </ScrollView>
     </Screen>
   );
 };

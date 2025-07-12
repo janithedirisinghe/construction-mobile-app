@@ -57,13 +57,11 @@ const LinkButtonText = styled.Text`
 `;
 
 export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
-  const [formData, setFormData] = useState<RegisterData>({
+  const [formData, setFormData] = useState({
     name: '',
     email: '',
-    password: '',
-    confirmPassword: '',
   });
-  const [errors, setErrors] = useState<Partial<RegisterData>>({});
+  const [errors, setErrors] = useState<Partial<typeof formData>>({});
   const [loading, setLoading] = useState(false);
 
   const validateForm = (): boolean => {
@@ -79,18 +77,6 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Please enter a valid email';
-    }
-
-    if (!formData.password.trim()) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-
-    if (!formData.confirmPassword.trim()) {
-      newErrors.confirmPassword = 'Please confirm your password';
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
     }
 
     setErrors(newErrors);
@@ -109,8 +95,8 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       Alert.alert(
-        'Registration Successful!',
-        'Your account has been created. Please login.',
+        'Account Created!',
+        'Your account information has been saved. You can sync your data later.',
         [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
       );
     } catch (error) {
@@ -120,7 +106,7 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  const updateField = (field: keyof RegisterData, value: string) => {
+  const updateField = (field: keyof typeof formData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
@@ -131,7 +117,7 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
     <Screen backgroundColor={colors.gray[100]}>
       <Container>
         <Title>Create Account</Title>
-        <Subtitle>Start tracking your construction projects</Subtitle>
+        <Subtitle>Enter your details to get started</Subtitle>
         
         <Card variant="elevated" padding="large">
           <Input
@@ -154,26 +140,6 @@ export const RegisterScreen: React.FC<Props> = ({ navigation }) => {
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
-          />
-
-          <Input
-            label="Password"
-            placeholder="Enter your password"
-            value={formData.password}
-            onChangeText={(value) => updateField('password', value)}
-            error={errors.password}
-            leftIcon="lock-closed"
-            secureTextEntry
-          />
-
-          <Input
-            label="Confirm Password"
-            placeholder="Confirm your password"
-            value={formData.confirmPassword}
-            onChangeText={(value) => updateField('confirmPassword', value)}
-            error={errors.confirmPassword}
-            leftIcon="lock-closed"
-            secureTextEntry
           />
 
           <Button
