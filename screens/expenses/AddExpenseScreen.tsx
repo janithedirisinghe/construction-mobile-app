@@ -14,6 +14,7 @@ import {
 } from '../../types/navigation';
 import { CreateExpenseData, ExpenseCategory, EXPENSE_CATEGORIES } from '../../types/expense';
 import { colors, spacing, typography, borderRadius, shadows } from '../../theme';
+import { ExpenseService } from '../../services/ExpenseService';
 
 const Header = styled.View`
   background-color: ${colors.white};
@@ -247,8 +248,17 @@ export const AddExpenseScreen: React.FC = () => {
     setLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const expenseData: CreateExpenseData = {
+        title: formData.title,
+        amount: formData.amount,
+        category: formData.category,
+        expenseDate: formData.expenseDate,
+        notes: formData.notes,
+        receiptUrl: formData.receiptUrl,
+        projectId: projectId
+      };
+      
+      await ExpenseService.createExpense(expenseData);
       
       Alert.alert(
         'Success',
@@ -261,6 +271,7 @@ export const AddExpenseScreen: React.FC = () => {
         ]
       );
     } catch (error) {
+      console.error('Error creating expense:', error);
       Alert.alert('Error', 'Failed to add expense. Please try again.');
     } finally {
       setLoading(false);

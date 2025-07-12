@@ -19,6 +19,9 @@ export type RootStackParamList = {
   // Main Tab Navigator
   MainTabs: undefined;
   
+  // Test Screen
+  DatabaseTest: undefined;
+  
   // Project Screens (accessible from Home tab)
   CreateProject: undefined;
   Dashboard: { projectId: number };

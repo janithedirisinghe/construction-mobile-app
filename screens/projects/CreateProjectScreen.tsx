@@ -11,6 +11,7 @@ import { Card } from '../../components/common/Card';
 import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
 import { colors, spacing, typography, borderRadius, shadows } from '../../theme';
+import { ProjectService } from '../../services/ProjectService';
 
 interface Props {
   navigation: CreateProjectScreenNavigationProp;
@@ -206,11 +207,13 @@ export const CreateProjectScreen: React.FC<Props> = ({ navigation }) => {
 
     setLoading(true);
     try {
-      // TODO: Implement actual API call
-      console.log('Create project data:', formData);
+      const projectData: CreateProjectData = {
+        ...formData,
+        userId: 1, // TODO: Get from auth context
+      };
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const newProject = await ProjectService.createProject(projectData);
+      console.log('Project created:', newProject);
       
       Alert.alert(
         'Project Created!',
@@ -218,6 +221,7 @@ export const CreateProjectScreen: React.FC<Props> = ({ navigation }) => {
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     } catch (error) {
+      console.error('Error creating project:', error);
       Alert.alert('Error', 'Failed to create project. Please try again.');
     } finally {
       setLoading(false);

@@ -3,12 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { FlatList, TouchableOpacity, Alert } from 'react-native';
 import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { LaborManagementScreenNavigationProp, LaborManagementScreenRouteProp } from '../../types/navigation';
 import { Labor, LaborAttendance } from '../../types/labor';
 import { Screen } from '../../components/common/Screen';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { colors, spacing, typography, borderRadius, shadows } from '../../theme';
+import { LaborService } from '../../services/LaborService';
 
 interface Props {
   navigation: LaborManagementScreenNavigationProp;
@@ -196,50 +198,6 @@ const EmptyText = styled.Text`
   margin-top: ${spacing.md}px;
 `;
 
-// Mock data
-const mockLaborers: Labor[] = [
-  {
-    id: 1,
-    name: "Kamal Perera",
-    role: "Mason",
-    dailyRate: 3500,
-    contactNumber: "077-1234567",
-    projectId: 1,
-    isActive: true,
-    createdAt: "2024-07-01T10:00:00Z",
-  },
-  {
-    id: 2,
-    name: "Sunil Silva",
-    role: "Carpenter",
-    dailyRate: 4000,
-    contactNumber: "071-9876543",
-    projectId: 1,
-    isActive: true,
-    createdAt: "2024-07-01T10:00:00Z",
-  },
-  {
-    id: 3,
-    name: "Nimal Fernando",
-    role: "Helper",
-    dailyRate: 2500,
-    contactNumber: "070-5555555",
-    projectId: 1,
-    isActive: true,
-    createdAt: "2024-07-01T10:00:00Z",
-  },
-  {
-    id: 4,
-    name: "Ranjan Wickrama",
-    role: "Electrician",
-    dailyRate: 4500,
-    contactNumber: "076-7777777",
-    projectId: 1,
-    isActive: true,
-    createdAt: "2024-07-01T10:00:00Z",
-  },
-];
-
 export const LaborManagementScreen: React.FC<Props> = ({ navigation, route }) => {
   const { projectId } = route.params;
   const [activeTab, setActiveTab] = useState<'laborers' | 'attendance'>('laborers');
@@ -251,28 +209,47 @@ export const LaborManagementScreen: React.FC<Props> = ({ navigation, route }) =>
     loadLaborData();
   }, [projectId]);
 
-  const loadLaborData = async () => {
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadLaborData(false); // Don't show loading indicator when focusing
+    }, [projectId])
+  );
+
+  const loadLaborData = async (showLoadingIndicator = true) => {
     try {
-      // TODO: Implement actual API calls
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setLaborers(mockLaborers);
-      // Initialize today's attendance
+      if (showLoadingIndicator) {
+        setLoading(true);
+      }
+      const laborData = await LaborService.getLaborByProject(projectId);
+      setLaborers(laborData);
+      
+      // Initialize today's attendance from database
       const today = new Date().toISOString().split('T')[0];
-      const initialAttendance = mockLaborers.map(laborer => ({
-        id: Date.now() + laborer.id,
-        laborId: laborer.id,
-        date: today,
-        isPresent: false,
-        hoursWorked: 8,
-        overtime: 0,
-        createdAt: new Date().toISOString(),
-      }));
-      setTodayAttendance(initialAttendance);
+      const existingAttendance = await LaborService.getAttendanceByDate(projectId, today);
+      
+      if (existingAttendance.length > 0) {
+        setTodayAttendance(existingAttendance);
+      } else {
+        // Create initial attendance records for today
+        const initialAttendance: LaborAttendance[] = laborData.map(laborer => ({
+          id: 0, // Will be set by database
+          laborId: laborer.id,
+          date: today,
+          isPresent: false,
+          hoursWorked: 8,
+          overtime: 0,
+          createdAt: new Date().toISOString(),
+        }));
+        setTodayAttendance(initialAttendance);
+      }
     } catch (error) {
       console.error('Error loading labor data:', error);
       Alert.alert('Error', 'Failed to load labor data');
     } finally {
-      setLoading(false);
+      if (showLoadingIndicator) {
+        setLoading(false);
+      }
     }
   };
 

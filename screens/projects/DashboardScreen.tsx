@@ -10,6 +10,9 @@ import { Screen } from '../../components/common/Screen';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { colors, spacing, typography, borderRadius, shadows } from '../../theme';
+import { ProjectService } from '../../services/ProjectService';
+import { ExpenseService } from '../../services/ExpenseService';
+import { useFocusEffect } from '@react-navigation/native';
 
 interface Props {
   navigation: DashboardScreenNavigationProp;
@@ -141,6 +144,7 @@ const ActionRow = styled.View`
   flex-direction: row;
   justify-content: space-between;
   gap: ${spacing.sm}px;
+  margin-bottom: ${spacing.md}px;
 `;
 
 const ActionButton = styled.TouchableOpacity`
@@ -238,81 +242,108 @@ const EmptyText = styled.Text`
   margin-top: ${spacing.md}px;
 `;
 
-// Mock data
-const mockProject: Project = {
-  id: 1,
-  title: "Modern Villa Construction",
-  startDate: "2024-01-15",
-  endDate: "2024-12-15",
-  targetBudget: 5000000,
-  totalSpent: 3500000,
-  userId: 1,
-};
+const ViewAllButton = styled.TouchableOpacity`
+  background-color: ${colors.white};
+  padding: ${spacing.lg}px;
+  border-radius: ${borderRadius.lg}px;
+  margin-top: ${spacing.md}px;
+  border: 2px solid ${colors.primary}20;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  ${shadows.medium};
+`;
 
-const mockExpenses: Expense[] = [
-  {
-    id: 1,
-    title: "Cement and Steel",
-    amount: 850000,
-    category: "Materials",
-    expenseDate: "2024-07-01",
-    notes: "High-grade cement and steel bars",
-    projectId: 1,
-    createdAt: "2024-07-01T10:00:00Z",
-  },
-  {
-    id: 2,
-    title: "Construction Workers",
-    amount: 1200000,
-    category: "Labor",
-    expenseDate: "2024-07-05",
-    notes: "Monthly wages for construction team",
-    projectId: 1,
-    createdAt: "2024-07-05T14:30:00Z",
-  },
-  {
-    id: 3,
-    title: "Excavator Rental",
-    amount: 450000,
-    category: "Equipment Rental",
-    expenseDate: "2024-07-08",
-    notes: "3-day excavator rental for foundation",
-    projectId: 1,
-    createdAt: "2024-07-08T09:15:00Z",
-  },
-  {
-    id: 4,
-    title: "Transportation",
-    amount: 125000,
-    category: "Transport",
-    expenseDate: "2024-07-10",
-    notes: "Material delivery and equipment transport",
-    projectId: 1,
-    createdAt: "2024-07-10T16:45:00Z",
-  },
-];
+const ViewAllButtonContent = styled.View`
+  flex-direction: row;
+  align-items: center;
+`;
+
+const ViewAllButtonText = styled.Text`
+  font-size: ${typography.sizes.md}px;
+  font-weight: ${typography.weights.semibold};
+  color: ${colors.primary};
+  margin-left: ${spacing.sm}px;
+`;
+
+const ViewAllButtonSubtext = styled.Text`
+  font-size: ${typography.sizes.sm}px;
+  color: ${colors.gray[600]};
+  margin-left: ${spacing.sm}px;
+  margin-top: ${spacing.xs}px;
+`;
+
+const ViewAllButtonIcon = styled.View`
+  width: 40px;
+  height: 40px;
+  background-color: ${colors.primary}15;
+  border-radius: ${borderRadius.round}px;
+  justify-content: center;
+  align-items: center;
+`;
+
+const ViewAllButtonTextContainer = styled.View`
+  flex: 1;
+  margin-left: ${spacing.md}px;
+`;
+
+const ExpenseCount = styled.Text`
+  font-size: ${typography.sizes.xs}px;
+  color: ${colors.primary};
+  font-weight: ${typography.weights.bold};
+  background-color: ${colors.primary}10;
+  padding: ${spacing.xs}px ${spacing.sm}px;
+  border-radius: ${borderRadius.round}px;
+  overflow: hidden;
+  margin-left: ${spacing.sm}px;
+`;
 
 export const DashboardScreen: React.FC<Props> = ({ navigation, route }) => {
   const { projectId } = route.params;
   const [project, setProject] = useState<Project | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [totalExpensesCount, setTotalExpensesCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadProjectData();
   }, [projectId]);
 
-  const loadProjectData = async () => {
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadProjectData(false); // Don't show loading indicator when focusing
+    }, [projectId])
+  );
+
+  const loadProjectData = async (showLoadingIndicator = true) => {
     try {
-      // TODO: Implement actual API calls
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setProject(mockProject);
-      setExpenses(mockExpenses);
+      if (showLoadingIndicator) {
+        setLoading(true);
+      }
+      
+      // Load project details
+      const projectData = await ProjectService.getProjectById(projectId);
+      if (!projectData) {
+        Alert.alert('Error', 'Project not found');
+        navigation.goBack();
+        return;
+      }
+      setProject(projectData);
+      
+      // Load recent expenses (limit to 5 most recent)
+      const expensesData = await ExpenseService.getFilteredExpenses({}, 'date', projectId);
+      setTotalExpensesCount(expensesData.length); // Store total count
+      const recentExpenses = expensesData.slice(0, 5); // Show only 5 most recent
+      setExpenses(recentExpenses);
+      
     } catch (error) {
       console.error('Error loading project data:', error);
       Alert.alert('Error', 'Failed to load project data');
     } finally {
-      setLoading(false);
+      if (showLoadingIndicator) {
+        setLoading(false);
+      }
     }
   };
 
@@ -343,6 +374,12 @@ export const DashboardScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const handleDailyAttendance = () => {
     navigation.navigate('DailyAttendance', { projectId });
+  };
+
+
+
+  const handleViewAllExpenses = () => {
+    navigation.navigate('ExpenseList', { projectId });
   };
 
   const handleExpensePress = (expense: Expense) => {
@@ -447,24 +484,47 @@ export const DashboardScreen: React.FC<Props> = ({ navigation, route }) => {
         <ExpensesSection>
           <SectionTitle>Recent Expenses</SectionTitle>
           {expenses.length > 0 ? (
-            expenses.map((item) => (
-              <TouchableOpacity key={item.id} onPress={() => handleExpensePress(item)}>
-                <ExpenseCard>
-                  <ExpenseHeader>
-                    <ExpenseName>{item.title}</ExpenseName>
-                    <ExpenseAmount>{formatCurrency(item.amount)}</ExpenseAmount>
-                  </ExpenseHeader>
-                  <ExpenseDetails>
-                    <ExpenseCategory>{item.category}</ExpenseCategory>
-                    <ExpenseDate>{formatDate(item.expenseDate)}</ExpenseDate>
-                  </ExpenseDetails>
-                </ExpenseCard>
-              </TouchableOpacity>
-            ))
+            <>
+              {expenses.map((item) => (
+                <TouchableOpacity key={item.id} onPress={() => handleExpensePress(item)}>
+                  <ExpenseCard>
+                    <ExpenseHeader>
+                      <ExpenseName>{item.title}</ExpenseName>
+                      <ExpenseAmount>{formatCurrency(item.amount)}</ExpenseAmount>
+                    </ExpenseHeader>
+                    <ExpenseDetails>
+                      <ExpenseCategory>{item.category}</ExpenseCategory>
+                      <ExpenseDate>{formatDate(item.expenseDate)}</ExpenseDate>
+                    </ExpenseDetails>
+                  </ExpenseCard>
+                </TouchableOpacity>
+              ))}
+              
+              <ViewAllButton onPress={handleViewAllExpenses} activeOpacity={0.7}>
+                <ViewAllButtonIcon>
+                  <Ionicons name="list-outline" size={20} color={colors.primary} />
+                </ViewAllButtonIcon>
+                <ViewAllButtonTextContainer>
+                  <ViewAllButtonContent>
+                    <ViewAllButtonText>View All Expenses</ViewAllButtonText>
+                    <ExpenseCount>{totalExpensesCount}</ExpenseCount>
+                  </ViewAllButtonContent>
+                  <ViewAllButtonSubtext>
+                    See complete expense history and details
+                  </ViewAllButtonSubtext>
+                </ViewAllButtonTextContainer>
+                <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+              </ViewAllButton>
+            </>
           ) : (
             <EmptyContainer>
               <Ionicons name="receipt-outline" size={64} color={colors.gray[400]} />
               <EmptyText>No expenses recorded yet.{'\n'}Add your first expense!</EmptyText>
+              <Button
+                title="Add First Expense"
+                onPress={handleAddExpense}
+                variant="primary"
+              />
             </EmptyContainer>
           )}
         </ExpensesSection>

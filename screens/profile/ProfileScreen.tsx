@@ -151,6 +151,10 @@ export const ProfileScreen: React.FC = () => {
     Alert.alert('About', 'Construction App v1.0.0\nBuilt for construction project management.');
   };
 
+  const handleDatabaseTest = () => {
+    navigation.navigate('DatabaseTest');
+  };
+
   const handleLogout = () => {
     Alert.alert(
       'Logout',
@@ -235,13 +239,26 @@ export const ProfileScreen: React.FC = () => {
               </ChevronIcon>
             </MenuItem>
 
-            <MenuItem onPress={handleAbout} style={{ borderBottomWidth: 0 }}>
+            <MenuItem onPress={handleAbout}>
               <MenuIconContainer>
                 <Ionicons name="information-circle-outline" size={20} color={colors.gray[600]} />
               </MenuIconContainer>
               <MenuContent>
                 <MenuTitle>About</MenuTitle>
                 <MenuSubtitle>App version and information</MenuSubtitle>
+              </MenuContent>
+              <ChevronIcon>
+                <Ionicons name="chevron-forward" size={20} color={colors.gray[400]} />
+              </ChevronIcon>
+            </MenuItem>
+
+            <MenuItem onPress={handleDatabaseTest} style={{ borderBottomWidth: 0 }}>
+              <MenuIconContainer>
+                <Ionicons name="construct-outline" size={20} color={colors.gray[600]} />
+              </MenuIconContainer>
+              <MenuContent>
+                <MenuTitle>Database Test</MenuTitle>
+                <MenuSubtitle>Test SQLite functionality</MenuSubtitle>
               </MenuContent>
               <ChevronIcon>
                 <Ionicons name="chevron-forward" size={20} color={colors.gray[400]} />

@@ -24,6 +24,8 @@ import { ExpenseDetailScreen } from '../screens/expenses/ExpenseDetailScreen';
 import { LaborManagementScreen } from '../screens/labor/LaborManagementScreen';
 import { AddLaborScreen } from '../screens/labor/AddLaborScreen';
 import { DailyAttendanceScreen } from '../screens/labor/DailyAttendanceScreen';
+import { AttendanceHistoryScreen } from '../screens/labor/AttendanceHistoryScreen';
+import { DatabaseTestScreen } from '../screens/DatabaseTestScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -39,7 +41,7 @@ export const AppNavigator: React.FC = () => {
         {/* Auth Screens */}
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
-        
+        <Stack.Screen name="DatabaseTest" component={DatabaseTestScreen} />
         {/* Main Tab Navigator */}
         <Stack.Screen name="MainTabs" component={MainTabNavigator} />
         
@@ -56,6 +58,7 @@ export const AppNavigator: React.FC = () => {
         <Stack.Screen name="LaborManagement" component={LaborManagementScreen} />
         <Stack.Screen name="AddLabor" component={AddLaborScreen} />
         <Stack.Screen name="DailyAttendance" component={DailyAttendanceScreen} />
+        <Stack.Screen name="AttendanceHistory" component={AttendanceHistoryScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
