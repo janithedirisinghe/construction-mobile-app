@@ -1,0 +1,436 @@
+// screens/labor/LaborManagementScreen.tsx
+import React, { useState, useEffect } from 'react';
+import { FlatList, TouchableOpacity, Alert } from 'react-native';
+import styled from 'styled-components/native';
+import { Ionicons } from '@expo/vector-icons';
+import { LaborManagementScreenNavigationProp, LaborManagementScreenRouteProp } from '../../types/navigation';
+import { Labor, LaborAttendance } from '../../types/labor';
+import { Screen } from '../../components/common/Screen';
+import { Card } from '../../components/common/Card';
+import { Button } from '../../components/common/Button';
+import { colors, spacing, typography, borderRadius, shadows } from '../../theme';
+
+interface Props {
+  navigation: LaborManagementScreenNavigationProp;
+  route: LaborManagementScreenRouteProp;
+}
+
+const Header = styled.View`
+  background-color: ${colors.white};
+  padding: ${spacing.lg}px;
+  margin: 0 -${spacing.lg}px ${spacing.md}px -${spacing.lg}px;
+  border-bottom-left-radius: ${borderRadius.xl}px;
+  border-bottom-right-radius: ${borderRadius.xl}px;
+`;
+
+const HeaderContent = styled.View`
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+const BackButton = styled.TouchableOpacity`
+  width: 40px;
+  height: 40px;
+  background-color: ${colors.gray[100]};
+  border-radius: ${borderRadius.round}px;
+  justify-content: center;
+  align-items: center;
+`;
+
+const HeaderText = styled.View`
+  flex: 1;
+  align-items: center;
+`;
+
+const Title = styled.Text`
+  font-size: ${typography.sizes.xl}px;
+  font-weight: ${typography.weights.bold};
+  color: ${colors.gray[900]};
+`;
+
+const Subtitle = styled.Text`
+  font-size: ${typography.sizes.sm}px;
+  color: ${colors.gray[600]};
+  margin-top: ${spacing.xs}px;
+`;
+
+const AddButton = styled.TouchableOpacity`
+  width: 40px;
+  height: 40px;
+  background-color: ${colors.primary};
+  border-radius: ${borderRadius.round}px;
+  justify-content: center;
+  align-items: center;
+`;
+
+const TabContainer = styled.View`
+  flex-direction: row;
+  background-color: ${colors.gray[100]};
+  border-radius: ${borderRadius.md}px;
+  margin-bottom: ${spacing.lg}px;
+  padding: ${spacing.xs}px;
+`;
+
+const Tab = styled.TouchableOpacity<{ active: boolean }>`
+  flex: 1;
+  padding: ${spacing.sm}px;
+  align-items: center;
+  background-color: ${props => props.active ? colors.white : 'transparent'};
+  border-radius: ${borderRadius.sm}px;
+  ${props => props.active ? shadows.small : ''};
+`;
+
+const TabText = styled.Text<{ active: boolean }>`
+  color: ${props => props.active ? colors.gray[900] : colors.gray[600]};
+  font-weight: ${props => props.active ? typography.weights.semibold : typography.weights.medium};
+  font-size: ${typography.sizes.sm}px;
+`;
+
+const LaborCard = styled(Card)`
+  margin-bottom: ${spacing.sm}px;
+`;
+
+const LaborHeader = styled.View`
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: ${spacing.sm}px;
+`;
+
+const LaborInfo = styled.View`
+  flex: 1;
+`;
+
+const LaborName = styled.Text`
+  font-size: ${typography.sizes.md}px;
+  font-weight: ${typography.weights.semibold};
+  color: ${colors.gray[900]};
+`;
+
+const LaborRole = styled.Text`
+  font-size: ${typography.sizes.sm}px;
+  color: ${colors.gray[600]};
+  margin-top: ${spacing.xs}px;
+`;
+
+const LaborRate = styled.Text`
+  font-size: ${typography.sizes.md}px;
+  font-weight: ${typography.weights.semibold};
+  color: ${colors.primary};
+`;
+
+const AttendanceContainer = styled.View`
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  background-color: ${colors.gray[100]};
+  padding: ${spacing.sm}px;
+  border-radius: ${borderRadius.sm}px;
+`;
+
+const AttendanceText = styled.Text`
+  font-size: ${typography.sizes.sm}px;
+  color: ${colors.gray[700]};
+`;
+
+const AttendanceButton = styled.TouchableOpacity<{ isPresent: boolean }>`
+  background-color: ${props => props.isPresent ? colors.success : colors.gray[300]};
+  padding: ${spacing.xs}px ${spacing.sm}px;
+  border-radius: ${borderRadius.sm}px;
+`;
+
+const AttendanceButtonText = styled.Text<{ isPresent: boolean }>`
+  color: ${props => props.isPresent ? colors.white : colors.gray[600]};
+  font-size: ${typography.sizes.xs}px;
+  font-weight: ${typography.weights.medium};
+`;
+
+const QuickActionsSection = styled.View`
+  margin-bottom: ${spacing.lg}px;
+`;
+
+const ActionRow = styled.View`
+  flex-direction: row;
+  justify-content: space-between;
+  gap: ${spacing.sm}px;
+`;
+
+const ActionButton = styled.TouchableOpacity`
+  flex: 1;
+  background-color: ${colors.white};
+  padding: ${spacing.md}px;
+  border-radius: ${borderRadius.md}px;
+  align-items: center;
+  ${shadows.small};
+`;
+
+const ActionIcon = styled.View`
+  width: 48px;
+  height: 48px;
+  background-color: ${colors.primary}20;
+  border-radius: ${borderRadius.round}px;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: ${spacing.sm}px;
+`;
+
+const ActionText = styled.Text`
+  font-size: ${typography.sizes.sm}px;
+  font-weight: ${typography.weights.medium};
+  color: ${colors.gray[900]};
+  text-align: center;
+`;
+
+const EmptyContainer = styled.View`
+  flex: 1;
+  justify-content: center;
+  align-items: center;
+  padding: ${spacing.xl}px;
+`;
+
+const EmptyText = styled.Text`
+  font-size: ${typography.sizes.md}px;
+  color: ${colors.gray[500]};
+  text-align: center;
+  margin-top: ${spacing.md}px;
+`;
+
+// Mock data
+const mockLaborers: Labor[] = [
+  {
+    id: 1,
+    name: "Kamal Perera",
+    role: "Mason",
+    dailyRate: 3500,
+    contactNumber: "077-1234567",
+    projectId: 1,
+    isActive: true,
+    createdAt: "2024-07-01T10:00:00Z",
+  },
+  {
+    id: 2,
+    name: "Sunil Silva",
+    role: "Carpenter",
+    dailyRate: 4000,
+    contactNumber: "071-9876543",
+    projectId: 1,
+    isActive: true,
+    createdAt: "2024-07-01T10:00:00Z",
+  },
+  {
+    id: 3,
+    name: "Nimal Fernando",
+    role: "Helper",
+    dailyRate: 2500,
+    contactNumber: "070-5555555",
+    projectId: 1,
+    isActive: true,
+    createdAt: "2024-07-01T10:00:00Z",
+  },
+  {
+    id: 4,
+    name: "Ranjan Wickrama",
+    role: "Electrician",
+    dailyRate: 4500,
+    contactNumber: "076-7777777",
+    projectId: 1,
+    isActive: true,
+    createdAt: "2024-07-01T10:00:00Z",
+  },
+];
+
+export const LaborManagementScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { projectId } = route.params;
+  const [activeTab, setActiveTab] = useState<'laborers' | 'attendance'>('laborers');
+  const [laborers, setLaborers] = useState<Labor[]>([]);
+  const [todayAttendance, setTodayAttendance] = useState<LaborAttendance[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadLaborData();
+  }, [projectId]);
+
+  const loadLaborData = async () => {
+    try {
+      // TODO: Implement actual API calls
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setLaborers(mockLaborers);
+      // Initialize today's attendance
+      const today = new Date().toISOString().split('T')[0];
+      const initialAttendance = mockLaborers.map(laborer => ({
+        id: Date.now() + laborer.id,
+        laborId: laborer.id,
+        date: today,
+        isPresent: false,
+        hoursWorked: 8,
+        overtime: 0,
+        createdAt: new Date().toISOString(),
+      }));
+      setTodayAttendance(initialAttendance);
+    } catch (error) {
+      console.error('Error loading labor data:', error);
+      Alert.alert('Error', 'Failed to load labor data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatCurrency = (amount: number): string => {
+    return `LKR ${amount.toLocaleString()}`;
+  };
+
+  const toggleAttendance = (laborId: number) => {
+    setTodayAttendance(prev => 
+      prev.map(attendance => 
+        attendance.laborId === laborId 
+          ? { ...attendance, isPresent: !attendance.isPresent }
+          : attendance
+      )
+    );
+  };
+
+  const handleAddLabor = () => {
+    navigation.navigate('AddLabor', { projectId });
+  };
+
+  const handleDailyAttendance = () => {
+    navigation.navigate('DailyAttendance', { projectId });
+  };
+
+  const handleAttendanceHistory = () => {
+    navigation.navigate('AttendanceHistory', { projectId });
+  };
+
+  const renderLaborCard = ({ item }: { item: Labor }) => {
+    const attendance = todayAttendance.find(a => a.laborId === item.id);
+    const isPresent = attendance?.isPresent || false;
+
+    return (
+      <TouchableOpacity onPress={() => navigation.navigate('LaborDetail', { laborId: item.id, projectId })}>
+        <LaborCard>
+          <LaborHeader>
+            <LaborInfo>
+              <LaborName>{item.name}</LaborName>
+              <LaborRole>{item.role}</LaborRole>
+            </LaborInfo>
+            <LaborRate>{formatCurrency(item.dailyRate)}/day</LaborRate>
+          </LaborHeader>
+          
+          {activeTab === 'attendance' && (
+            <AttendanceContainer>
+              <AttendanceText>Today's Attendance</AttendanceText>
+              <AttendanceButton 
+                isPresent={isPresent}
+                onPress={() => toggleAttendance(item.id)}
+              >
+                <AttendanceButtonText isPresent={isPresent}>
+                  {isPresent ? 'Present' : 'Absent'}
+                </AttendanceButtonText>
+              </AttendanceButton>
+            </AttendanceContainer>
+          )}
+        </LaborCard>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderEmptyState = () => (
+    <EmptyContainer>
+      <Ionicons name="people-outline" size={64} color={colors.gray[400]} />
+      <EmptyText>No laborers added yet.{'\n'}Add your first laborer!</EmptyText>
+    </EmptyContainer>
+  );
+
+  if (loading) {
+    return (
+      <Screen>
+        <EmptyContainer>
+          <Ionicons name="time-outline" size={64} color={colors.gray[400]} />
+          <EmptyText>Loading labor data...</EmptyText>
+        </EmptyContainer>
+      </Screen>
+    );
+  }
+
+  const presentCount = todayAttendance.filter(a => a.isPresent).length;
+  const totalCost = todayAttendance
+    .filter(a => a.isPresent)
+    .reduce((sum, a) => {
+      const laborer = laborers.find(l => l.id === a.laborId);
+      return sum + (laborer?.dailyRate || 0);
+    }, 0);
+
+  return (
+    <Screen>
+      <Header>
+        <HeaderContent>
+          <BackButton onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color={colors.gray[900]} />
+          </BackButton>
+          <HeaderText>
+            <Title>Labor Management</Title>
+            <Subtitle>{laborers.length} laborers • {presentCount} present today</Subtitle>
+          </HeaderText>
+          <AddButton onPress={handleAddLabor}>
+            <Ionicons name="add" size={24} color={colors.white} />
+          </AddButton>
+        </HeaderContent>
+      </Header>
+
+      <QuickActionsSection>
+        <ActionRow>
+          <ActionButton onPress={handleDailyAttendance}>
+            <ActionIcon>
+              <Ionicons name="checkmark-circle-outline" size={24} color={colors.primary} />
+            </ActionIcon>
+            <ActionText>Mark{'\n'}Attendance</ActionText>
+          </ActionButton>
+          
+          <ActionButton onPress={handleAttendanceHistory}>
+            <ActionIcon>
+              <Ionicons name="calendar-outline" size={24} color={colors.primary} />
+            </ActionIcon>
+            <ActionText>Attendance{'\n'}History</ActionText>
+          </ActionButton>
+          
+          <ActionButton onPress={handleAddLabor}>
+            <ActionIcon>
+              <Ionicons name="person-add-outline" size={24} color={colors.primary} />
+            </ActionIcon>
+            <ActionText>Add{'\n'}Laborer</ActionText>
+          </ActionButton>
+        </ActionRow>
+      </QuickActionsSection>
+
+      <TabContainer>
+        <Tab 
+          active={activeTab === 'laborers'} 
+          onPress={() => setActiveTab('laborers')}
+        >
+          <TabText active={activeTab === 'laborers'}>Laborers ({laborers.length})</TabText>
+        </Tab>
+        <Tab 
+          active={activeTab === 'attendance'} 
+          onPress={() => setActiveTab('attendance')}
+        >
+          <TabText active={activeTab === 'attendance'}>Quick Attendance</TabText>
+        </Tab>
+      </TabContainer>
+
+      <FlatList
+        data={laborers}
+        renderItem={renderLaborCard}
+        keyExtractor={item => item.id.toString()}
+        ListEmptyComponent={renderEmptyState}
+        showsVerticalScrollIndicator={false}
+      />
+
+      {activeTab === 'attendance' && presentCount > 0 && (
+        <Card style={{ marginTop: spacing.md }}>
+          <AttendanceText>Today's Total: {presentCount} workers • {formatCurrency(totalCost)}</AttendanceText>
+        </Card>
+      )}
+    </Screen>
+  );
+};

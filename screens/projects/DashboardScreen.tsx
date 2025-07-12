@@ -133,8 +133,40 @@ const ProgressFill = styled.View<{ percentage: number }>`
   border-radius: ${borderRadius.round}px;
 `;
 
-const AddExpenseSection = styled.View`
+const QuickActionsSection = styled.View`
   margin-bottom: ${spacing.lg}px;
+`;
+
+const ActionRow = styled.View`
+  flex-direction: row;
+  justify-content: space-between;
+  gap: ${spacing.sm}px;
+`;
+
+const ActionButton = styled.TouchableOpacity`
+  flex: 1;
+  background-color: ${colors.white};
+  padding: ${spacing.md}px;
+  border-radius: ${borderRadius.md}px;
+  align-items: center;
+  ${shadows.small};
+`;
+
+const ActionIcon = styled.View`
+  width: 48px;
+  height: 48px;
+  background-color: ${colors.primary}20;
+  border-radius: ${borderRadius.round}px;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: ${spacing.sm}px;
+`;
+
+const ActionText = styled.Text`
+  font-size: ${typography.sizes.sm}px;
+  font-weight: ${typography.weights.medium};
+  color: ${colors.gray[900]};
+  text-align: center;
 `;
 
 const ExpensesSection = styled.View`
@@ -305,6 +337,14 @@ export const DashboardScreen: React.FC<Props> = ({ navigation, route }) => {
     navigation.navigate('AddExpense', { projectId });
   };
 
+  const handleLaborManagement = () => {
+    navigation.navigate('LaborManagement', { projectId });
+  };
+
+  const handleDailyAttendance = () => {
+    navigation.navigate('DailyAttendance', { projectId });
+  };
+
   const handleExpensePress = (expense: Expense) => {
     navigation.navigate('ExpenseDetail', { 
       expenseId: expense.id, 
@@ -399,12 +439,31 @@ export const DashboardScreen: React.FC<Props> = ({ navigation, route }) => {
         </ProgressContainer>
       </ProjectCard>
 
-      <AddExpenseSection>
-        <Button
-          title="Add Expense"
-          onPress={handleAddExpense}
-        />
-      </AddExpenseSection>
+      <QuickActionsSection>
+        <SectionTitle>Quick Actions</SectionTitle>
+        <ActionRow>
+          <ActionButton onPress={handleAddExpense}>
+            <ActionIcon>
+              <Ionicons name="receipt-outline" size={24} color={colors.primary} />
+            </ActionIcon>
+            <ActionText>Add{'\n'}Expense</ActionText>
+          </ActionButton>
+          
+          <ActionButton onPress={handleLaborManagement}>
+            <ActionIcon>
+              <Ionicons name="people-outline" size={24} color={colors.primary} />
+            </ActionIcon>
+            <ActionText>Manage{'\n'}Labor</ActionText>
+          </ActionButton>
+          
+          <ActionButton onPress={handleDailyAttendance}>
+            <ActionIcon>
+              <Ionicons name="checkmark-circle-outline" size={24} color={colors.primary} />
+            </ActionIcon>
+            <ActionText>Mark{'\n'}Attendance</ActionText>
+          </ActionButton>
+        </ActionRow>
+      </QuickActionsSection>
 
       <ExpensesSection>
         <SectionTitle>Recent Expenses</SectionTitle>
