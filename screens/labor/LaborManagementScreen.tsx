@@ -3,12 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { FlatList, TouchableOpacity, Alert } from 'react-native';
 import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { LaborManagementScreenNavigationProp, LaborManagementScreenRouteProp } from '../../types/navigation';
 import { Labor, LaborAttendance } from '../../types/labor';
 import { Screen } from '../../components/common/Screen';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { colors, spacing, typography, borderRadius, shadows } from '../../theme';
+import { LaborService } from '../../services/LaborService';
 
 interface Props {
   navigation: LaborManagementScreenNavigationProp;
@@ -53,6 +55,20 @@ const Subtitle = styled.Text`
   font-size: ${typography.sizes.sm}px;
   color: ${colors.gray[600]};
   margin-top: ${spacing.xs}px;
+`;
+
+const FilterButton = styled.TouchableOpacity<{ active: boolean }>`
+  width: 40px;
+  height: 40px;
+  background-color: ${props => props.active ? colors.primary : colors.gray[100]};
+  border-radius: ${borderRadius.round}px;
+  justify-content: center;
+  align-items: center;
+  margin-right: ${spacing.sm}px;
+`;
+
+const HeaderActionRow = styled.View`
+  flex-direction: row;
 `;
 
 const AddButton = styled.TouchableOpacity`
@@ -118,6 +134,19 @@ const LaborRate = styled.Text`
   font-size: ${typography.sizes.md}px;
   font-weight: ${typography.weights.semibold};
   color: ${colors.primary};
+`;
+
+const StatusBadge = styled.View<{ isActive: boolean }>`
+  background-color: ${props => props.isActive ? colors.success : colors.error};
+  padding: ${spacing.xs}px ${spacing.sm}px;
+  border-radius: ${borderRadius.sm}px;
+  margin-top: ${spacing.xs}px;
+`;
+
+const StatusText = styled.Text`
+  color: ${colors.white};
+  font-size: ${typography.sizes.xs}px;
+  font-weight: ${typography.weights.medium};
 `;
 
 const AttendanceContainer = styled.View`
@@ -196,54 +225,11 @@ const EmptyText = styled.Text`
   margin-top: ${spacing.md}px;
 `;
 
-// Mock data
-const mockLaborers: Labor[] = [
-  {
-    id: 1,
-    name: "Kamal Perera",
-    role: "Mason",
-    dailyRate: 3500,
-    contactNumber: "077-1234567",
-    projectId: 1,
-    isActive: true,
-    createdAt: "2024-07-01T10:00:00Z",
-  },
-  {
-    id: 2,
-    name: "Sunil Silva",
-    role: "Carpenter",
-    dailyRate: 4000,
-    contactNumber: "071-9876543",
-    projectId: 1,
-    isActive: true,
-    createdAt: "2024-07-01T10:00:00Z",
-  },
-  {
-    id: 3,
-    name: "Nimal Fernando",
-    role: "Helper",
-    dailyRate: 2500,
-    contactNumber: "070-5555555",
-    projectId: 1,
-    isActive: true,
-    createdAt: "2024-07-01T10:00:00Z",
-  },
-  {
-    id: 4,
-    name: "Ranjan Wickrama",
-    role: "Electrician",
-    dailyRate: 4500,
-    contactNumber: "076-7777777",
-    projectId: 1,
-    isActive: true,
-    createdAt: "2024-07-01T10:00:00Z",
-  },
-];
-
 export const LaborManagementScreen: React.FC<Props> = ({ navigation, route }) => {
   const { projectId } = route.params;
   const [activeTab, setActiveTab] = useState<'laborers' | 'attendance'>('laborers');
   const [laborers, setLaborers] = useState<Labor[]>([]);
+  const [showInactive, setShowInactive] = useState(false);
   const [todayAttendance, setTodayAttendance] = useState<LaborAttendance[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -251,28 +237,48 @@ export const LaborManagementScreen: React.FC<Props> = ({ navigation, route }) =>
     loadLaborData();
   }, [projectId]);
 
-  const loadLaborData = async () => {
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadLaborData(false); // Don't show loading indicator when focusing
+    }, [projectId, showInactive]) // Add showInactive as dependency
+  );
+
+  const loadLaborData = async (showLoadingIndicator = true) => {
     try {
-      // TODO: Implement actual API calls
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setLaborers(mockLaborers);
-      // Initialize today's attendance
+      if (showLoadingIndicator) {
+        setLoading(true);
+      }
+      // Load laborers based on active/inactive filter
+      const laborData = await LaborService.getLaborByProject(projectId, !showInactive);
+      setLaborers(laborData);
+      
+      // Initialize today's attendance from database
       const today = new Date().toISOString().split('T')[0];
-      const initialAttendance = mockLaborers.map(laborer => ({
-        id: Date.now() + laborer.id,
-        laborId: laborer.id,
-        date: today,
-        isPresent: false,
-        hoursWorked: 8,
-        overtime: 0,
-        createdAt: new Date().toISOString(),
-      }));
-      setTodayAttendance(initialAttendance);
+      const existingAttendance = await LaborService.getAttendanceByDate(projectId, today);
+      
+      if (existingAttendance.length > 0) {
+        setTodayAttendance(existingAttendance);
+      } else {
+        // Create initial attendance records for today
+        const initialAttendance: LaborAttendance[] = laborData.map(laborer => ({
+          id: 0, // Will be set by database
+          laborId: laborer.id,
+          date: today,
+          isPresent: false,
+          hoursWorked: 8,
+          overtime: 0,
+          createdAt: new Date().toISOString(),
+        }));
+        setTodayAttendance(initialAttendance);
+      }
     } catch (error) {
       console.error('Error loading labor data:', error);
       Alert.alert('Error', 'Failed to load labor data');
     } finally {
-      setLoading(false);
+      if (showLoadingIndicator) {
+        setLoading(false);
+      }
     }
   };
 
@@ -289,6 +295,11 @@ export const LaborManagementScreen: React.FC<Props> = ({ navigation, route }) =>
       )
     );
   };
+
+  // Add useEffect to reload data when filter changes
+  useEffect(() => {
+    loadLaborData();
+  }, [showInactive]);
 
   const handleAddLabor = () => {
     navigation.navigate('AddLabor', { projectId });
@@ -313,11 +324,16 @@ export const LaborManagementScreen: React.FC<Props> = ({ navigation, route }) =>
             <LaborInfo>
               <LaborName>{item.name}</LaborName>
               <LaborRole>{item.role}</LaborRole>
+              {showInactive && (
+                <StatusBadge isActive={item.isActive}>
+                  <StatusText>{item.isActive ? 'Active' : 'Inactive'}</StatusText>
+                </StatusBadge>
+              )}
             </LaborInfo>
             <LaborRate>{formatCurrency(item.dailyRate)}/day</LaborRate>
           </LaborHeader>
           
-          {activeTab === 'attendance' && (
+          {activeTab === 'attendance' && item.isActive && (
             <AttendanceContainer>
               <AttendanceText>Today's Attendance</AttendanceText>
               <AttendanceButton 
@@ -338,7 +354,12 @@ export const LaborManagementScreen: React.FC<Props> = ({ navigation, route }) =>
   const renderEmptyState = () => (
     <EmptyContainer>
       <Ionicons name="people-outline" size={64} color={colors.gray[400]} />
-      <EmptyText>No laborers added yet.{'\n'}Add your first laborer!</EmptyText>
+      <EmptyText>
+        {showInactive 
+          ? 'No inactive laborers found.' 
+          : 'No laborers added yet.\nAdd your first laborer!'
+        }
+      </EmptyText>
     </EmptyContainer>
   );
 
@@ -353,6 +374,11 @@ export const LaborManagementScreen: React.FC<Props> = ({ navigation, route }) =>
     );
   }
 
+  const activeLaborers = laborers.filter(l => l.isActive);
+  const inactiveLaborers = laborers.filter(l => !l.isActive);
+  const displayCount = showInactive ? inactiveLaborers.length : activeLaborers.length;
+  const totalLaborers = showInactive ? inactiveLaborers.length : activeLaborers.length;
+  
   const presentCount = todayAttendance.filter(a => a.isPresent).length;
   const totalCost = todayAttendance
     .filter(a => a.isPresent)
@@ -370,11 +396,23 @@ export const LaborManagementScreen: React.FC<Props> = ({ navigation, route }) =>
           </BackButton>
           <HeaderText>
             <Title>Labor Management</Title>
-            <Subtitle>{laborers.length} laborers • {presentCount} present today</Subtitle>
+            <Subtitle>{totalLaborers} {showInactive ? 'inactive' : 'active'} laborers • {presentCount} present today</Subtitle>
           </HeaderText>
-          <AddButton onPress={handleAddLabor}>
-            <Ionicons name="add" size={24} color={colors.white} />
-          </AddButton>
+          <HeaderActionRow>
+            <FilterButton 
+              active={showInactive}
+              onPress={() => setShowInactive(!showInactive)}
+            >
+              <Ionicons 
+                name={showInactive ? "eye-off" : "eye"} 
+                size={20} 
+                color={showInactive ? colors.white : colors.gray[700]} 
+              />
+            </FilterButton>
+            <AddButton onPress={handleAddLabor}>
+              <Ionicons name="add" size={24} color={colors.white} />
+            </AddButton>
+          </HeaderActionRow>
         </HeaderContent>
       </Header>
 

@@ -9,6 +9,8 @@ import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import { colors, spacing, typography, borderRadius } from '../../theme';
+import { LaborService } from '../../services/LaborService';
+import { CreateLaborData } from '../../types/labor';
 
 interface Props {
   navigation: AddLaborScreenNavigationProp;
@@ -148,8 +150,15 @@ export const AddLaborScreen: React.FC<Props> = ({ navigation, route }) => {
 
     setLoading(true);
     try {
-      // TODO: Implement actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const laborData: CreateLaborData = {
+        name: formData.name.trim(),
+        role: formData.role,
+        dailyRate: parseFloat(formData.dailyRate),
+        contactNumber: formData.contactNumber.trim() || undefined,
+        projectId: projectId
+      };
+      
+      await LaborService.createLabor(laborData);
       
       Alert.alert(
         'Success',
@@ -158,7 +167,7 @@ export const AddLaborScreen: React.FC<Props> = ({ navigation, route }) => {
       );
     } catch (error) {
       console.error('Error adding laborer:', error);
-      Alert.alert('Error', 'Failed to add laborer');
+      Alert.alert('Error', 'Failed to add laborer. Please try again.');
     } finally {
       setLoading(false);
     }

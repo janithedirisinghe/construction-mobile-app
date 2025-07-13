@@ -20,7 +20,8 @@ const Container = styled.View`
 
 const LogoContainer = styled.View`
   align-items: center;
-  margin-bottom: ${spacing.xxl}px;
+  flex: 1;
+  justify-content: center;
 `;
 
 const LogoCircle = styled.View`
@@ -59,45 +60,15 @@ const Tagline = styled.Text`
   color: ${colors.white}90;
   text-align: center;
   font-weight: ${typography.weights.medium};
-  margin-bottom: ${spacing.xxl}px;
 `;
 
-const FeatureContainer = styled.View`
-  width: 100%;
-  margin-bottom: ${spacing.xxl}px;
-`;
-
-const FeatureItem = styled.View`
-  flex-direction: row;
-  align-items: center;
-  margin-bottom: ${spacing.md}px;
-`;
-
-const FeatureIcon = styled.View`
-  width: 32px;
-  height: 32px;
-  background-color: ${colors.white}20;
-  border-radius: 16px;
-  justify-content: center;
-  align-items: center;
-  margin-right: ${spacing.md}px;
-`;
-
-const FeatureIconText = styled.Text`
-  font-size: 16px;
-  color: ${colors.white};
-`;
-
-const FeatureText = styled.Text`
-  font-size: ${typography.sizes.md}px;
-  color: ${colors.white}90;
-  font-weight: ${typography.weights.medium};
-  flex: 1;
-`;
 
 const BottomContainer = styled.View`
   align-items: center;
-  margin-top: auto;
+  position: absolute;
+  bottom: ${spacing.xxl}px;
+  left: 0;
+  right: 0;
 `;
 
 const LoadingContainer = styled.View`
@@ -120,12 +91,7 @@ const VersionText = styled.Text`
   text-align: center;
 `;
 
-const features = [
-  { icon: '📊', text: 'Track project expenses in real-time' },
-  { icon: '👥', text: 'Manage labor attendance & wages' },
-  { icon: '💰', text: 'Monitor budget vs actual costs' },
-  { icon: '📈', text: 'Generate detailed reports' },
-];
+
 
 export const SplashScreen: React.FC<Props> = ({ onFinish }) => {
   const opacity1 = useRef(new Animated.Value(0.3)).current;
@@ -177,19 +143,8 @@ export const SplashScreen: React.FC<Props> = ({ onFinish }) => {
             <LogoText>BT</LogoText>
           </LogoCircle>
           <AppName>BuildTrack</AppName>
-          <Tagline>Construction Management Made Simple</Tagline>
+          <Tagline>Construction Budget Management</Tagline>
         </LogoContainer>
-
-        <FeatureContainer>
-          {features.map((feature, index) => (
-            <FeatureItem key={index}>
-              <FeatureIcon>
-                <FeatureIconText>{feature.icon}</FeatureIconText>
-              </FeatureIcon>
-              <FeatureText>{feature.text}</FeatureText>
-            </FeatureItem>
-          ))}
-        </FeatureContainer>
 
         <BottomContainer>
           <LoadingContainer>

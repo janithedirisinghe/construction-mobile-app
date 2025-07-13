@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { ScrollView, Alert, Share } from 'react-native';
+import { ScrollView, Alert, Share, Modal, Dimensions, Image } from 'react-native';
 import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { Screen } from '../../components/common/Screen';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
@@ -12,6 +12,7 @@ import {
 } from '../../types/navigation';
 import { Expense } from '../../types/expense';
 import { colors, spacing, typography, borderRadius } from '../../theme';
+import { ExpenseService } from '../../services/ExpenseService';
 
 const Header = styled.View`
   background-color: ${colors.white};
@@ -137,18 +138,18 @@ const NotesText = styled.Text`
 
 const ReceiptContainer = styled.TouchableOpacity`
   background-color: ${colors.gray[100]};
-  padding: ${spacing.lg}px;
   border-radius: ${borderRadius.md}px;
-  align-items: center;
-  justify-content: center;
+  overflow: hidden;
   margin-top: ${spacing.sm}px;
-  border: 2px dashed ${colors.gray[300]};
+  border: 1px solid ${colors.gray[300]};
 `;
 
 const ReceiptText = styled.Text`
   color: ${colors.gray[600]};
-  font-size: ${typography.sizes.md}px;
-  margin-top: ${spacing.sm}px;
+  font-size: ${typography.sizes.sm}px;
+  text-align: center;
+  padding: ${spacing.sm}px;
+  background-color: rgba(255, 255, 255, 0.9);
 `;
 
 const ButtonContainer = styled.View`
@@ -209,6 +210,55 @@ const LoadingText = styled.Text`
   color: ${colors.gray[500]};
 `;
 
+const ReceiptImage = styled.Image`
+  width: 100%;
+  height: 200px;
+  border-radius: ${borderRadius.md}px;
+`;
+
+const ReceiptImageFull = styled.Image`
+  width: 100%;
+  height: 100%;
+`;
+
+const ModalContainer = styled.View`
+  flex: 1;
+  background-color: ${colors.black};
+  justify-content: center;
+  align-items: center;
+`;
+
+const ModalHeader = styled.View`
+  position: absolute;
+  top: 60px;
+  left: 0;
+  right: 0;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 ${spacing.lg}px;
+  z-index: 1000;
+`;
+
+const ModalCloseButton = styled.TouchableOpacity`
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: ${spacing.sm}px;
+  border-radius: ${borderRadius.round}px;
+`;
+
+const ModalTitle = styled.Text`
+  color: ${colors.white};
+  font-size: ${typography.sizes.lg}px;
+  font-weight: ${typography.weights.bold};
+`;
+
+const ImageContainer = styled.View`
+  width: 100%;
+  height: 70%;
+  justify-content: center;
+  align-items: center;
+`;
+
 export const ExpenseDetailScreen: React.FC = () => {
   const navigation = useNavigation<ExpenseDetailScreenNavigationProp>();
   const route = useRoute<ExpenseDetailScreenRouteProp>();
@@ -216,31 +266,31 @@ export const ExpenseDetailScreen: React.FC = () => {
 
   const [expense, setExpense] = useState<Expense | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
 
   useEffect(() => {
     loadExpenseDetails();
   }, [expenseId]);
 
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadExpenseDetails();
+    }, [expenseId])
+  );
+
   const loadExpenseDetails = async () => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock data - replace with actual API call
-      const mockExpense: Expense = {
-        id: expenseId,
-        title: 'Concrete Mix',
-        amount: 250000,
-        category: 'Materials',
-        expenseDate: '2025-07-10',
-        notes: 'High-quality concrete mix for foundation work. Includes delivery charges and additional materials for reinforcement.',
-        receiptUrl: 'https://example.com/receipt.jpg',
-        projectId: projectId,
-        createdAt: '2025-07-10T10:00:00Z'
-      };
-
-      setExpense(mockExpense);
+      setLoading(true);
+      const expenseData = await ExpenseService.getExpenseById(expenseId);
+      if (!expenseData) {
+        Alert.alert('Error', 'Expense not found');
+        navigation.goBack();
+        return;
+      }
+      setExpense(expenseData);
     } catch (error) {
+      console.error('Error loading expense:', error);
       Alert.alert('Error', 'Failed to load expense details');
     } finally {
       setLoading(false);
@@ -273,7 +323,7 @@ export const ExpenseDetailScreen: React.FC = () => {
   };
 
   const handleEdit = () => {
-    Alert.alert('Edit Expense', 'Edit functionality will be implemented soon.');
+    navigation.navigate('EditExpense', { expenseId, projectId });
   };
 
   const handleDelete = () => {
@@ -287,13 +337,16 @@ export const ExpenseDetailScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              // Simulate API call
-              await new Promise(resolve => setTimeout(resolve, 1000));
+              setLoading(true);
+              await ExpenseService.deleteExpense(expenseId);
               Alert.alert('Success', 'Expense deleted successfully', [
-                { text: 'OK', onPress: () => navigation.goBack() }
+                { text: 'OK', onPress: () => navigation.navigate('ExpenseList', { projectId }) }
               ]);
             } catch (error) {
+              console.error('Error deleting expense:', error);
               Alert.alert('Error', 'Failed to delete expense');
+            } finally {
+              setLoading(false);
             }
           }
         }
@@ -315,7 +368,11 @@ export const ExpenseDetailScreen: React.FC = () => {
   };
 
   const handleViewReceipt = () => {
-    Alert.alert('View Receipt', 'Receipt viewing functionality will be implemented soon.');
+    if (expense?.receiptUrl) {
+      setShowReceiptModal(true);
+    } else {
+      Alert.alert('No Receipt', 'No receipt attached to this expense.');
+    }
   };
 
   if (loading) {
@@ -404,8 +461,11 @@ export const ExpenseDetailScreen: React.FC = () => {
             <DetailSection>
               <SectionTitle>Receipt</SectionTitle>
               <ReceiptContainer onPress={handleViewReceipt}>
-                <Ionicons name="document-text-outline" size={32} color={colors.gray[500]} />
-                <ReceiptText>Tap to view receipt</ReceiptText>
+                <ReceiptImage 
+                  source={{ uri: expense.receiptUrl }} 
+                  resizeMode="cover"
+                />
+                <ReceiptText>Tap to view full size</ReceiptText>
               </ReceiptContainer>
             </DetailSection>
           )}
@@ -430,6 +490,31 @@ export const ExpenseDetailScreen: React.FC = () => {
           </DeleteButton>
         </DeleteButtonContainer>
       </ScrollView>
+
+      {/* Receipt Image Modal */}
+      <Modal
+        visible={showReceiptModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowReceiptModal(false)}
+      >
+        <ModalContainer>
+          <ModalHeader>
+            <ModalTitle>Receipt</ModalTitle>
+            <ModalCloseButton onPress={() => setShowReceiptModal(false)}>
+              <Ionicons name="close" size={24} color={colors.white} />
+            </ModalCloseButton>
+          </ModalHeader>
+          <ImageContainer>
+            {expense?.receiptUrl && (
+              <ReceiptImageFull 
+                source={{ uri: expense.receiptUrl }} 
+                resizeMode="contain"
+              />
+            )}
+          </ImageContainer>
+        </ModalContainer>
+      </Modal>
     </Screen>
   );
 };

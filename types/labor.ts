@@ -9,6 +9,14 @@ export interface Labor {
   createdAt: string;
 }
 
+export interface CreateLaborData {
+  name: string;
+  role: string;
+  dailyRate: number;
+  contactNumber?: string;
+  projectId: number;
+}
+
 export interface LaborAttendance {
   id: number;
   laborId: number;

@@ -38,9 +38,9 @@ export const MainTabNavigator: React.FC = () => {
           backgroundColor: colors.white,
           borderTopWidth: 1,
           borderTopColor: colors.gray[200],
-          paddingTop: 8,
-          paddingBottom: Math.max(insets.bottom, 8),
-          height: 60 + Math.max(insets.bottom - 8, 0),
+          paddingTop: 10,
+          paddingBottom: Math.max(insets.bottom + 8, 16),
+          height: 80 + Math.max(insets.bottom, 0),
           elevation: 8,
           shadowColor: '#000',
           shadowOffset: {
@@ -53,8 +53,11 @@ export const MainTabNavigator: React.FC = () => {
         tabBarLabelStyle: {
           fontSize: typography.sizes.xs,
           fontWeight: '500' as const,
+          marginTop: 2,
+          marginBottom: 2,
+        },
+        tabBarIconStyle: {
           marginTop: 4,
-          marginBottom: 4,
         },
       })}
     >

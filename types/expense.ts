@@ -18,6 +18,7 @@ export interface CreateExpenseData {
   expenseDate: string;
   notes?: string;
   receiptUrl?: string;
+  offlineReceiptId?: string; // For offline image tracking (online sync disabled)
   projectId: number;
 }
 

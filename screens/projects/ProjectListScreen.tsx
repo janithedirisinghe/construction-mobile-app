@@ -3,12 +3,15 @@ import React, { useState, useEffect } from 'react';
 import { FlatList, TouchableOpacity, TextInput } from 'react-native';
 import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { HomeScreenNavigationProp } from '../../types/navigation';
 import { Project } from '../../types/project';
+import { User } from '../../types/auth';
 import { Screen } from '../../components/common/Screen';
 import { Card } from '../../components/common/Card';
 import { colors, spacing, typography, borderRadius, shadows } from '../../theme';
+import { ProjectService } from '../../services/ProjectService';
+import { UserService } from '../../services/UserService';
 
 const Header = styled.View`
   background-color: ${colors.white};
@@ -109,6 +112,15 @@ const ProjectTitle = styled.Text`
   flex: 1;
 `;
 
+const MenuButton = styled.TouchableOpacity`
+  width: 32px;
+  height: 32px;
+  background-color: ${colors.gray[100]};
+  border-radius: ${borderRadius.round}px;
+  justify-content: center;
+  align-items: center;
+`;
+
 const BudgetInfo = styled.View`
   flex-direction: row;
   justify-content: space-between;
@@ -174,55 +186,53 @@ const EmptyText = styled.Text`
   margin-top: ${spacing.md}px;
 `;
 
-// Mock data for demonstration
-const mockProjects: Project[] = [
-  {
-    id: 1,
-    title: "Modern Villa Construction",
-    startDate: "2024-01-15",
-    endDate: "2024-12-15",
-    targetBudget: 5000000,
-    totalSpent: 3500000,
-    userId: 1,
-  },
-  {
-    id: 2,
-    title: "Office Building Renovation",
-    startDate: "2024-03-01",
-    endDate: "2024-08-30",
-    targetBudget: 2500000,
-    totalSpent: 1200000,
-    userId: 1,
-  },
-];
-
 export const ProjectListScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const [projects, setProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // Mock user data - in real app, this would come from auth context
-  const userName = "John Doe";
 
   useEffect(() => {
     loadProjects();
+    loadCurrentUser();
   }, []);
+
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadProjects(false); // Don't show loading indicator when focusing
+      loadCurrentUser(); // Also refresh user data
+    }, [])
+  );
 
   useEffect(() => {
     filterProjects();
   }, [projects, searchQuery]);
 
-  const loadProjects = async () => {
+  const loadCurrentUser = async () => {
     try {
-      // TODO: Implement actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setProjects(mockProjects);
+      const user = await UserService.getCurrentUser();
+      setCurrentUser(user);
+    } catch (error) {
+      console.error('Error loading current user:', error);
+    }
+  };
+
+  const loadProjects = async (showLoadingIndicator = true) => {
+    try {
+      if (showLoadingIndicator) {
+        setLoading(true);
+      }
+      const projectsData = await ProjectService.getAllProjects();
+      setProjects(projectsData);
     } catch (error) {
       console.error('Error loading projects:', error);
     } finally {
-      setLoading(false);
+      if (showLoadingIndicator) {
+        setLoading(false);
+      }
     }
   };
 
@@ -250,11 +260,19 @@ export const ProjectListScreen: React.FC = () => {
     const progress = calculateProgress(item.totalSpent || 0, item.targetBudget);
     const remaining = item.targetBudget - (item.totalSpent || 0);
 
+    const handleEditPress = (e: any) => {
+      e.stopPropagation(); // Prevent card's onPress from firing
+      navigation.navigate('EditProject', { projectId: item.id });
+    };
+
     return (
       <TouchableOpacity onPress={() => navigation.navigate('Dashboard', { projectId: item.id })}>
         <ProjectCard>
           <ProjectHeader>
             <ProjectTitle>{item.title}</ProjectTitle>
+            <MenuButton onPress={handleEditPress}>
+              <Ionicons name="create-outline" size={16} color={colors.primary} />
+            </MenuButton>
           </ProjectHeader>
 
           <BudgetInfo>
@@ -302,7 +320,7 @@ export const ProjectListScreen: React.FC = () => {
       <Header>
         <WelcomeSection>
           <WelcomeText>Welcome back,</WelcomeText>
-          <Title>{userName}</Title>
+          <Title>{currentUser?.name || 'User'}</Title>
         </WelcomeSection>
 
         <SearchSection>
@@ -342,6 +360,7 @@ export const ProjectListScreen: React.FC = () => {
         refreshing={loading}
         onRefresh={loadProjects}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: spacing.xl }}
       />
     </Screen>
   );

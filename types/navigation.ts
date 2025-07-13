@@ -19,19 +19,28 @@ export type RootStackParamList = {
   // Main Tab Navigator
   MainTabs: undefined;
   
+  // Test Screen
+  DatabaseTest: undefined;
+  
+  // Profile Screens
+  EditProfile: undefined;
+  
   // Project Screens (accessible from Home tab)
   CreateProject: undefined;
+  EditProject: { projectId: number };
   Dashboard: { projectId: number };
   ExpenseList: { projectId: number };
   AddExpense: { projectId: number };
+  EditExpense: { expenseId: number; projectId: number };
   ExpenseDetail: { expenseId: number; projectId: number };
   
   // Labor Management Screens
   LaborManagement: { projectId: number };
   AddLabor: { projectId: number };
+  EditLabor: { laborId: number; projectId: number };
   DailyAttendance: { projectId: number };
   LaborDetail: { laborId: number; projectId: number };
-  AttendanceHistory: { projectId: number };
+  AttendanceHistory: { projectId: number; laborId?: number };
 };
 
 // Composite navigation types for tab screens
@@ -53,28 +62,35 @@ export type ProfileScreenNavigationProp = CompositeNavigationProp<
 // Navigation prop types for each screen
 export type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
 export type RegisterScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Register'>;
+export type EditProfileScreenNavigationProp = StackNavigationProp<RootStackParamList, 'EditProfile'>;
 export type CreateProjectScreenNavigationProp = StackNavigationProp<RootStackParamList, 'CreateProject'>;
+export type EditProjectScreenNavigationProp = StackNavigationProp<RootStackParamList, 'EditProject'>;
 export type DashboardScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Dashboard'>;
 export type ExpenseListScreenNavigationProp = StackNavigationProp<RootStackParamList, 'ExpenseList'>;
 export type AddExpenseScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AddExpense'>;
+export type EditExpenseScreenNavigationProp = StackNavigationProp<RootStackParamList, 'EditExpense'>;
 export type ExpenseDetailScreenNavigationProp = StackNavigationProp<RootStackParamList, 'ExpenseDetail'>;
 
 // Labor screen navigation types
 export type LaborManagementScreenNavigationProp = StackNavigationProp<RootStackParamList, 'LaborManagement'>;
 export type AddLaborScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AddLabor'>;
+export type EditLaborScreenNavigationProp = StackNavigationProp<RootStackParamList, 'EditLabor'>;
 export type DailyAttendanceScreenNavigationProp = StackNavigationProp<RootStackParamList, 'DailyAttendance'>;
 export type LaborDetailScreenNavigationProp = StackNavigationProp<RootStackParamList, 'LaborDetail'>;
 export type AttendanceHistoryScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AttendanceHistory'>;
 
 // Route prop types for screens that receive parameters
+export type EditProjectScreenRouteProp = RouteProp<RootStackParamList, 'EditProject'>;
 export type DashboardScreenRouteProp = RouteProp<RootStackParamList, 'Dashboard'>;
 export type ExpenseListScreenRouteProp = RouteProp<RootStackParamList, 'ExpenseList'>;
 export type AddExpenseScreenRouteProp = RouteProp<RootStackParamList, 'AddExpense'>;
+export type EditExpenseScreenRouteProp = RouteProp<RootStackParamList, 'EditExpense'>;
 export type ExpenseDetailScreenRouteProp = RouteProp<RootStackParamList, 'ExpenseDetail'>;
 
 // Labor screen route types
 export type LaborManagementScreenRouteProp = RouteProp<RootStackParamList, 'LaborManagement'>;
 export type AddLaborScreenRouteProp = RouteProp<RootStackParamList, 'AddLabor'>;
+export type EditLaborScreenRouteProp = RouteProp<RootStackParamList, 'EditLabor'>;
 export type DailyAttendanceScreenRouteProp = RouteProp<RootStackParamList, 'DailyAttendance'>;
 export type LaborDetailScreenRouteProp = RouteProp<RootStackParamList, 'LaborDetail'>;
 export type AttendanceHistoryScreenRouteProp = RouteProp<RootStackParamList, 'AttendanceHistory'>;

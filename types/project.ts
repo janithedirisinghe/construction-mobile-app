@@ -16,4 +16,5 @@ export interface CreateProjectData {
   endDate: string;
   targetBudget: number;
   description?: string;
+  userId?: number;
 }
