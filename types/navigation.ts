@@ -24,9 +24,11 @@ export type RootStackParamList = {
   
   // Project Screens (accessible from Home tab)
   CreateProject: undefined;
+  EditProject: { projectId: number };
   Dashboard: { projectId: number };
   ExpenseList: { projectId: number };
   AddExpense: { projectId: number };
+  EditExpense: { expenseId: number; projectId: number };
   ExpenseDetail: { expenseId: number; projectId: number };
   
   // Labor Management Screens
@@ -57,9 +59,11 @@ export type ProfileScreenNavigationProp = CompositeNavigationProp<
 export type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
 export type RegisterScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Register'>;
 export type CreateProjectScreenNavigationProp = StackNavigationProp<RootStackParamList, 'CreateProject'>;
+export type EditProjectScreenNavigationProp = StackNavigationProp<RootStackParamList, 'EditProject'>;
 export type DashboardScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Dashboard'>;
 export type ExpenseListScreenNavigationProp = StackNavigationProp<RootStackParamList, 'ExpenseList'>;
 export type AddExpenseScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AddExpense'>;
+export type EditExpenseScreenNavigationProp = StackNavigationProp<RootStackParamList, 'EditExpense'>;
 export type ExpenseDetailScreenNavigationProp = StackNavigationProp<RootStackParamList, 'ExpenseDetail'>;
 
 // Labor screen navigation types
@@ -70,9 +74,11 @@ export type LaborDetailScreenNavigationProp = StackNavigationProp<RootStackParam
 export type AttendanceHistoryScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AttendanceHistory'>;
 
 // Route prop types for screens that receive parameters
+export type EditProjectScreenRouteProp = RouteProp<RootStackParamList, 'EditProject'>;
 export type DashboardScreenRouteProp = RouteProp<RootStackParamList, 'Dashboard'>;
 export type ExpenseListScreenRouteProp = RouteProp<RootStackParamList, 'ExpenseList'>;
 export type AddExpenseScreenRouteProp = RouteProp<RootStackParamList, 'AddExpense'>;
+export type EditExpenseScreenRouteProp = RouteProp<RootStackParamList, 'EditExpense'>;
 export type ExpenseDetailScreenRouteProp = RouteProp<RootStackParamList, 'ExpenseDetail'>;
 
 // Labor screen route types

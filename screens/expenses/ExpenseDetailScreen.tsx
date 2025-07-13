@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ScrollView, Alert, Share } from 'react-native';
 import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { Screen } from '../../components/common/Screen';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
@@ -12,6 +12,7 @@ import {
 } from '../../types/navigation';
 import { Expense } from '../../types/expense';
 import { colors, spacing, typography, borderRadius } from '../../theme';
+import { ExpenseService } from '../../services/ExpenseService';
 
 const Header = styled.View`
   background-color: ${colors.white};
@@ -221,26 +222,25 @@ export const ExpenseDetailScreen: React.FC = () => {
     loadExpenseDetails();
   }, [expenseId]);
 
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadExpenseDetails();
+    }, [expenseId])
+  );
+
   const loadExpenseDetails = async () => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock data - replace with actual API call
-      const mockExpense: Expense = {
-        id: expenseId,
-        title: 'Concrete Mix',
-        amount: 250000,
-        category: 'Materials',
-        expenseDate: '2025-07-10',
-        notes: 'High-quality concrete mix for foundation work. Includes delivery charges and additional materials for reinforcement.',
-        receiptUrl: 'https://example.com/receipt.jpg',
-        projectId: projectId,
-        createdAt: '2025-07-10T10:00:00Z'
-      };
-
-      setExpense(mockExpense);
+      setLoading(true);
+      const expenseData = await ExpenseService.getExpenseById(expenseId);
+      if (!expenseData) {
+        Alert.alert('Error', 'Expense not found');
+        navigation.goBack();
+        return;
+      }
+      setExpense(expenseData);
     } catch (error) {
+      console.error('Error loading expense:', error);
       Alert.alert('Error', 'Failed to load expense details');
     } finally {
       setLoading(false);
@@ -273,7 +273,7 @@ export const ExpenseDetailScreen: React.FC = () => {
   };
 
   const handleEdit = () => {
-    Alert.alert('Edit Expense', 'Edit functionality will be implemented soon.');
+    navigation.navigate('EditExpense', { expenseId, projectId });
   };
 
   const handleDelete = () => {
@@ -287,13 +287,16 @@ export const ExpenseDetailScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              // Simulate API call
-              await new Promise(resolve => setTimeout(resolve, 1000));
+              setLoading(true);
+              await ExpenseService.deleteExpense(expenseId);
               Alert.alert('Success', 'Expense deleted successfully', [
-                { text: 'OK', onPress: () => navigation.goBack() }
+                { text: 'OK', onPress: () => navigation.navigate('ExpenseList', { projectId }) }
               ]);
             } catch (error) {
+              console.error('Error deleting expense:', error);
               Alert.alert('Error', 'Failed to delete expense');
+            } finally {
+              setLoading(false);
             }
           }
         }

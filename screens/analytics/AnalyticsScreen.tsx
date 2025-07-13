@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { ScrollView, Dimensions } from 'react-native';
+import { ScrollView, RefreshControl } from 'react-native';
 import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { AnalyticsScreenNavigationProp } from '../../types/navigation';
 import { Screen } from '../../components/common/Screen';
 import { Card } from '../../components/common/Card';
-import { colors, spacing, typography, borderRadius } from '../../theme';
+import { colors, spacing, typography, borderRadius, shadows } from '../../theme';
+import { ProjectService } from '../../services/ProjectService';
+import { ExpenseService } from '../../services/ExpenseService';
+import { Project } from '../../types/project';
+import { Expense } from '../../types/expense';
 
 const Header = styled.View`
   background-color: ${colors.white};
@@ -14,6 +18,7 @@ const Header = styled.View`
   margin: 0 -${spacing.lg}px ${spacing.md}px -${spacing.lg}px;
   border-bottom-left-radius: ${borderRadius.xl}px;
   border-bottom-right-radius: ${borderRadius.xl}px;
+  ${shadows.medium};
 `;
 
 const HeaderContent = styled.View`
@@ -41,7 +46,7 @@ const StatsGrid = styled.View`
 
 const StatCard = styled(Card)`
   flex: 1;
-  min-width: 160px;
+  min-width: 48%;
   margin: ${spacing.xs}px;
 `;
 
@@ -49,12 +54,12 @@ const StatHeader = styled.View`
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: ${spacing.sm}px;
+  margin-bottom: ${spacing.md}px;
 `;
 
 const StatIconContainer = styled.View`
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: ${borderRadius.md}px;
   justify-content: center;
   align-items: center;
@@ -71,12 +76,13 @@ const StatLabel = styled.Text`
   font-size: ${typography.sizes.sm}px;
   color: ${colors.gray[600]};
   font-weight: ${typography.weights.medium};
+  margin-bottom: ${spacing.xs}px;
 `;
 
 const StatChange = styled.Text<{ positive: boolean }>`
   font-size: ${typography.sizes.xs}px;
   color: ${props => props.positive ? colors.success : colors.error};
-  font-weight: ${typography.weights.medium};
+  font-weight: ${typography.weights.semibold};
 `;
 
 const ChartSection = styled.View`
@@ -90,19 +96,80 @@ const SectionTitle = styled.Text`
   margin-bottom: ${spacing.md}px;
 `;
 
-const ChartPlaceholder = styled.View`
-  height: 200px;
-  background-color: ${colors.gray[100]};
-  border-radius: ${borderRadius.md}px;
-  justify-content: center;
-  align-items: center;
-  border: 2px dashed ${colors.gray[300]};
+const ProgressContainer = styled.View`
+  margin-bottom: ${spacing.md}px;
 `;
 
-const ChartPlaceholderText = styled.Text`
-  color: ${colors.gray[500]};
+const ProgressHeader = styled.View`
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: ${spacing.sm}px;
+`;
+
+const ProgressLabel = styled.Text`
   font-size: ${typography.sizes.md}px;
-  margin-top: ${spacing.sm}px;
+  font-weight: ${typography.weights.medium};
+  color: ${colors.gray[900]};
+`;
+
+const ProgressValue = styled.Text`
+  font-size: ${typography.sizes.sm}px;
+  font-weight: ${typography.weights.semibold};
+  color: ${colors.primary};
+`;
+
+const ProgressBar = styled.View`
+  height: 8px;
+  background-color: ${colors.gray[200]};
+  border-radius: ${borderRadius.round}px;
+  overflow: hidden;
+`;
+
+const ProgressFill = styled.View<{ percentage: number; color?: string }>`
+  height: 100%;
+  width: ${props => Math.min(props.percentage, 100)}%;
+  background-color: ${props => props.color || colors.primary};
+  border-radius: ${borderRadius.round}px;
+`;
+
+const CategoryContainer = styled.View`
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: ${spacing.sm}px;
+`;
+
+const CategoryItem = styled.View`
+  flex-direction: row;
+  align-items: center;
+  background-color: ${colors.gray[100]};
+  padding: ${spacing.sm}px ${spacing.md}px;
+  border-radius: ${borderRadius.md}px;
+  border-left-width: 4px;
+  border-left-color: ${colors.primary};
+`;
+
+const CategoryDot = styled.View<{ color: string }>`
+  width: 12px;
+  height: 12px;
+  border-radius: ${borderRadius.round}px;
+  background-color: ${props => props.color};
+  margin-right: ${spacing.sm}px;
+`;
+
+const CategoryInfo = styled.View`
+  flex: 1;
+`;
+
+const CategoryName = styled.Text`
+  font-size: ${typography.sizes.sm}px;
+  font-weight: ${typography.weights.medium};
+  color: ${colors.gray[900]};
+`;
+
+const CategoryAmount = styled.Text`
+  font-size: ${typography.sizes.xs}px;
+  color: ${colors.gray[600]};
 `;
 
 const RecentActivity = styled.View`
@@ -118,8 +185,8 @@ const ActivityItem = styled.View`
 `;
 
 const ActivityIconContainer = styled.View`
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   background-color: ${colors.primary}20;
   border-radius: ${borderRadius.md}px;
   justify-content: center;
@@ -153,72 +220,135 @@ const LoadingContainer = styled.View`
   flex: 1;
   justify-content: center;
   align-items: center;
+  padding: ${spacing.xxl}px;
+`;
+
+const LoadingIcon = styled.View`
+  width: 80px;
+  height: 80px;
+  background-color: ${colors.gray[100]};
+  border-radius: ${borderRadius.round}px;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: ${spacing.lg}px;
+`;
+
+const LoadingTitle = styled.Text`
+  font-size: ${typography.sizes.lg}px;
+  font-weight: ${typography.weights.bold};
+  color: ${colors.gray[700]};
+  text-align: center;
+  margin-bottom: ${spacing.sm}px;
 `;
 
 const LoadingText = styled.Text`
-  font-size: ${typography.sizes.lg}px;
+  font-size: ${typography.sizes.md}px;
   color: ${colors.gray[500]};
+  text-align: center;
+  line-height: 22px;
 `;
 
-// Mock data
-const mockStats = {
-  totalProjects: 5,
-  activeProjects: 3,
-  totalBudget: 15000000,
-  totalSpent: 8500000,
-  thisMonthExpenses: 750000,
-  avgProjectCost: 3000000,
-};
+interface AnalyticsData {
+  totalProjects: number;
+  activeProjects: number;
+  completedProjects: number;
+  totalBudget: number;
+  totalSpent: number;
+  budgetUtilization: number;
+  totalExpenses: number;
+  avgExpenseAmount: number;
+  recentExpenses: Expense[];
+  expensesByCategory: { [key: string]: number };
+}
 
-const mockRecentActivity = [
-  {
-    id: 1,
-    title: 'Material Purchase',
-    subtitle: 'Concrete mix for Villa project',
-    amount: 250000,
-    date: '2024-07-10',
-    type: 'expense'
-  },
-  {
-    id: 2,
-    title: 'Labor Payment',
-    subtitle: 'Weekly wages for construction crew',
-    amount: 180000,
-    date: '2024-07-09',
-    type: 'expense'
-  },
-  {
-    id: 3,
-    title: 'Equipment Rental',
-    subtitle: 'Excavator rental for foundation',
-    amount: 85000,
-    date: '2024-07-08',
-    type: 'expense'
-  },
-];
+const CATEGORY_COLORS: { [key: string]: string } = {
+  'Materials': colors.primary,
+  'Labor': colors.success,
+  'Equipment': colors.warning,
+  'Equipment Rental': colors.info,
+  'Transport': colors.error,
+  'Permits': '#8B5CF6',
+  'Utilities': '#06B6D4',
+  'Other': colors.gray[500],
+};
 
 export const AnalyticsScreen: React.FC = () => {
   const navigation = useNavigation<AnalyticsScreenNavigationProp>();
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState(mockStats);
-  const [recentActivity, setRecentActivity] = useState(mockRecentActivity);
+  const [refreshing, setRefreshing] = useState(false);
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
 
   useEffect(() => {
     loadAnalytics();
   }, []);
 
-  const loadAnalytics = async () => {
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadAnalytics(false);
+    }, [])
+  );
+
+  const loadAnalytics = async (showLoading = true) => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // In a real app, you would fetch actual analytics data here
-      setStats(mockStats);
-      setRecentActivity(mockRecentActivity);
+      if (showLoading) setLoading(true);
+
+      // Load all projects
+      const projects = await ProjectService.getAllProjects();
+      
+      // Load all expenses
+      const expenses = await ExpenseService.getAllExpenses();
+      
+      const now = new Date();
+      const activeProjects = projects.filter(project => {
+        const endDate = new Date(project.endDate);
+        return endDate >= now;
+      });
+
+      const completedProjects = projects.filter(project => {
+        const endDate = new Date(project.endDate);
+        return endDate < now;
+      });
+
+      const totalBudget = projects.reduce((sum, project) => sum + project.targetBudget, 0);
+      const totalSpent = projects.reduce((sum, project) => sum + (project.totalSpent || 0), 0);
+      
+      // Calculate expenses by category
+      const expensesByCategory: { [key: string]: number } = {};
+      expenses.forEach(expense => {
+        if (expensesByCategory[expense.category]) {
+          expensesByCategory[expense.category] += expense.amount;
+        } else {
+          expensesByCategory[expense.category] = expense.amount;
+        }
+      });
+
+      const analyticsData: AnalyticsData = {
+        totalProjects: projects.length,
+        activeProjects: activeProjects.length,
+        completedProjects: completedProjects.length,
+        totalBudget,
+        totalSpent,
+        budgetUtilization: totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0,
+        totalExpenses: expenses.length,
+        avgExpenseAmount: expenses.length > 0 ? 
+          expenses.reduce((sum, e) => sum + e.amount, 0) / expenses.length : 0,
+        recentExpenses: expenses.slice(0, 5),
+        expensesByCategory,
+      };
+
+      setAnalyticsData(analyticsData);
     } catch (error) {
       console.error('Error loading analytics:', error);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadAnalytics(false);
+    setRefreshing(false);
   };
 
   const formatCurrency = (amount: number) => {
@@ -227,113 +357,199 @@ export const AnalyticsScreen: React.FC = () => {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric'
+    return date.toLocaleDateString('en-GB', { 
+      day: '2-digit',
+      month: 'short',
     });
+  };
+
+  const renderProgressBar = (label: string, current: number, total: number, color?: string) => {
+    const percentage = total > 0 ? (current / total) * 100 : 0;
+    return (
+      <ProgressContainer>
+        <ProgressHeader>
+          <ProgressLabel>{label}</ProgressLabel>
+          <ProgressValue>{percentage.toFixed(1)}%</ProgressValue>
+        </ProgressHeader>
+        <ProgressBar>
+          <ProgressFill percentage={percentage} color={color} />
+        </ProgressBar>
+      </ProgressContainer>
+    );
   };
 
   if (loading) {
     return (
       <Screen includeTabBarPadding={true}>
+        <Header>
+          <HeaderContent>
+            <Title>Analytics</Title>
+            <Subtitle>Loading insights...</Subtitle>
+          </HeaderContent>
+        </Header>
+        
         <LoadingContainer>
-          <LoadingText>Loading analytics...</LoadingText>
+          <LoadingIcon>
+            <Ionicons name="analytics-outline" size={40} color={colors.gray[400]} />
+          </LoadingIcon>
+          <LoadingTitle>Loading Analytics</LoadingTitle>
+          <LoadingText>Please wait while we analyze your project data...</LoadingText>
         </LoadingContainer>
       </Screen>
     );
   }
 
-  const completionRate = (stats.totalProjects > 0) ? 
-    ((stats.totalProjects - stats.activeProjects) / stats.totalProjects * 100) : 0;
-  
-  const budgetUtilization = (stats.totalBudget > 0) ? 
-    (stats.totalSpent / stats.totalBudget * 100) : 0;
+  if (!analyticsData) {
+    return (
+      <Screen includeTabBarPadding={true}>
+        <Header>
+          <HeaderContent>
+            <Title>Analytics</Title>
+            <Subtitle>Project insights and statistics</Subtitle>
+          </HeaderContent>
+        </Header>
+        
+        <LoadingContainer>
+          <LoadingIcon>
+            <Ionicons name="bar-chart-outline" size={40} color={colors.gray[400]} />
+          </LoadingIcon>
+          <LoadingTitle>No Data Available</LoadingTitle>
+          <LoadingText>
+            Start creating projects and adding expenses to see your analytics dashboard.
+          </LoadingText>
+        </LoadingContainer>
+      </Screen>
+    );
+  }
 
   return (
     <Screen includeTabBarPadding={true}>
-      <Header>
-        <HeaderContent>
-          <Title>Analytics</Title>
-          <Subtitle>Project insights and statistics</Subtitle>
-        </HeaderContent>
-      </Header>
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
+      >
+        <Header>
+          <HeaderContent>
+            <Title>Analytics</Title>
+            <Subtitle>Project insights and statistics</Subtitle>
+          </HeaderContent>
+        </Header>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
         <StatsGrid>
           <StatCard padding="medium">
             <StatHeader>
               <StatIconContainer style={{ backgroundColor: colors.primary + '20' }}>
-                <Ionicons name="folder" size={20} color={colors.primary} />
+                <Ionicons name="folder-outline" size={20} color={colors.primary} />
               </StatIconContainer>
             </StatHeader>
-            <StatValue>{stats.totalProjects}</StatValue>
+            <StatValue>{analyticsData.totalProjects}</StatValue>
             <StatLabel>Total Projects</StatLabel>
-            <StatChange positive={true}>+2 this month</StatChange>
+            <StatChange positive={true}>{analyticsData.activeProjects} active</StatChange>
           </StatCard>
 
           <StatCard padding="medium">
             <StatHeader>
               <StatIconContainer style={{ backgroundColor: colors.success + '20' }}>
-                <Ionicons name="trending-up" size={20} color={colors.success} />
+                <Ionicons name="pie-chart-outline" size={20} color={colors.success} />
               </StatIconContainer>
             </StatHeader>
-            <StatValue>{stats.activeProjects}</StatValue>
-            <StatLabel>Active Projects</StatLabel>
-            <StatChange positive={true}>60% active rate</StatChange>
+            <StatValue>{analyticsData.budgetUtilization.toFixed(1)}%</StatValue>
+            <StatLabel>Budget Used</StatLabel>
+            <StatChange positive={analyticsData.budgetUtilization <= 90}>
+              {analyticsData.budgetUtilization > 100 ? 'Over budget' : 'On track'}
+            </StatChange>
           </StatCard>
 
           <StatCard padding="medium">
             <StatHeader>
               <StatIconContainer style={{ backgroundColor: colors.warning + '20' }}>
-                <Ionicons name="wallet" size={20} color={colors.warning} />
+                <Ionicons name="receipt-outline" size={20} color={colors.warning} />
               </StatIconContainer>
             </StatHeader>
-            <StatValue>{formatCurrency(stats.totalBudget)}</StatValue>
-            <StatLabel>Total Budget</StatLabel>
-            <StatChange positive={false}>-5% from last month</StatChange>
+            <StatValue>{analyticsData.totalExpenses}</StatValue>
+            <StatLabel>Total Expenses</StatLabel>
+            <StatChange positive={true}>All time</StatChange>
           </StatCard>
 
           <StatCard padding="medium">
             <StatHeader>
-              <StatIconContainer style={{ backgroundColor: colors.error + '20' }}>
-                <Ionicons name="card" size={20} color={colors.error} />
+              <StatIconContainer style={{ backgroundColor: colors.info + '20' }}>
+                <Ionicons name="trending-up-outline" size={20} color={colors.info} />
               </StatIconContainer>
             </StatHeader>
-            <StatValue>{formatCurrency(stats.totalSpent)}</StatValue>
-            <StatLabel>Total Spent</StatLabel>
-            <StatChange positive={false}>{budgetUtilization.toFixed(1)}% of budget</StatChange>
+            <StatValue>{formatCurrency(analyticsData.avgExpenseAmount)}</StatValue>
+            <StatLabel>Avg Expense</StatLabel>
+            <StatChange positive={true}>Per transaction</StatChange>
           </StatCard>
         </StatsGrid>
 
         <Card padding="large">
           <ChartSection>
-            <SectionTitle>Budget vs Spending Trend</SectionTitle>
-            <ChartPlaceholder>
-              <Ionicons name="bar-chart" size={48} color={colors.gray[400]} />
-              <ChartPlaceholderText>Chart will be implemented soon</ChartPlaceholderText>
-            </ChartPlaceholder>
+            <SectionTitle>Budget Overview</SectionTitle>
+            
+            {renderProgressBar(
+              'Budget Utilization',
+              analyticsData.totalSpent,
+              analyticsData.totalBudget,
+              analyticsData.budgetUtilization > 90 ? colors.error : colors.primary
+            )}
+            
+            {renderProgressBar(
+              'Project Completion',
+              analyticsData.completedProjects,
+              analyticsData.totalProjects,
+              colors.success
+            )}
+          </ChartSection>
+        </Card>
+
+        <Card padding="large">
+          <ChartSection>
+            <SectionTitle>Expense Categories</SectionTitle>
+            
+            <CategoryContainer>
+              {Object.entries(analyticsData.expensesByCategory)
+                .sort(([,a], [,b]) => (b as number) - (a as number))
+                .slice(0, 6)
+                .map(([category, amount]) => (
+                  <CategoryItem key={category}>
+                    <CategoryDot color={CATEGORY_COLORS[category] || colors.primary} />
+                    <CategoryInfo>
+                      <CategoryName>{category}</CategoryName>
+                      <CategoryAmount>{formatCurrency(amount as number)}</CategoryAmount>
+                    </CategoryInfo>
+                  </CategoryItem>
+                ))}
+            </CategoryContainer>
           </ChartSection>
         </Card>
 
         <Card padding="large">
           <RecentActivity>
             <SectionTitle>Recent Activity</SectionTitle>
-            {recentActivity.map((activity, index) => (
-              <ActivityItem key={activity.id} style={{ 
-                borderBottomWidth: index === recentActivity.length - 1 ? 0 : 1 
-              }}>
+            
+            {analyticsData.recentExpenses.map((expense, index) => (
+              <ActivityItem 
+                key={expense.id} 
+                style={{ borderBottomWidth: index === analyticsData.recentExpenses.length - 1 ? 0 : 1 }}
+              >
                 <ActivityIconContainer>
-                  <Ionicons 
-                    name={activity.type === 'expense' ? 'remove-circle' : 'add-circle'} 
-                    size={20} 
-                    color={colors.primary} 
-                  />
+                  <Ionicons name="receipt-outline" size={20} color={colors.primary} />
                 </ActivityIconContainer>
                 <ActivityContent>
-                  <ActivityTitle>{activity.title}</ActivityTitle>
-                  <ActivitySubtitle>{activity.subtitle} • {formatDate(activity.date)}</ActivitySubtitle>
+                  <ActivityTitle>{expense.title}</ActivityTitle>
+                  <ActivitySubtitle>
+                    {expense.category} • {formatDate(expense.expenseDate)}
+                  </ActivitySubtitle>
                 </ActivityContent>
-                <ActivityAmount>{formatCurrency(activity.amount)}</ActivityAmount>
+                <ActivityAmount>{formatCurrency(expense.amount)}</ActivityAmount>
               </ActivityItem>
             ))}
           </RecentActivity>

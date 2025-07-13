@@ -110,6 +110,15 @@ const ProjectTitle = styled.Text`
   flex: 1;
 `;
 
+const MenuButton = styled.TouchableOpacity`
+  width: 32px;
+  height: 32px;
+  background-color: ${colors.gray[100]};
+  border-radius: ${borderRadius.round}px;
+  justify-content: center;
+  align-items: center;
+`;
+
 const BudgetInfo = styled.View`
   flex-direction: row;
   justify-content: space-between;
@@ -240,11 +249,19 @@ export const ProjectListScreen: React.FC = () => {
     const progress = calculateProgress(item.totalSpent || 0, item.targetBudget);
     const remaining = item.targetBudget - (item.totalSpent || 0);
 
+    const handleEditPress = (e: any) => {
+      e.stopPropagation(); // Prevent card's onPress from firing
+      navigation.navigate('EditProject', { projectId: item.id });
+    };
+
     return (
       <TouchableOpacity onPress={() => navigation.navigate('Dashboard', { projectId: item.id })}>
         <ProjectCard>
           <ProjectHeader>
             <ProjectTitle>{item.title}</ProjectTitle>
+            <MenuButton onPress={handleEditPress}>
+              <Ionicons name="create-outline" size={16} color={colors.primary} />
+            </MenuButton>
           </ProjectHeader>
 
           <BudgetInfo>

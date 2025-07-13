@@ -13,11 +13,13 @@ import { MainTabNavigator } from './MainTabNavigator';
 
 // Project Screens (accessible from Home tab)
 import { CreateProjectScreen } from '../screens/projects/CreateProjectScreen';
+import { EditProjectScreen } from '../screens/projects/EditProjectScreen';
 import { DashboardScreen } from '../screens/projects/DashboardScreen';
 
 // Expense Screens
 import { ExpenseListScreen } from '../screens/expenses/ExpenseListScreen';
 import { AddExpenseScreen } from '../screens/expenses/AddExpenseScreen';
+import { EditExpenseScreen } from '../screens/expenses/EditExpenseScreen';
 import { ExpenseDetailScreen } from '../screens/expenses/ExpenseDetailScreen';
 
 // Labor Screens
@@ -47,11 +49,13 @@ export const AppNavigator: React.FC = () => {
         
         {/* Project Screens (accessible from Home tab) */}
         <Stack.Screen name="CreateProject" component={CreateProjectScreen} />
+        <Stack.Screen name="EditProject" component={EditProjectScreen} />
         <Stack.Screen name="Dashboard" component={DashboardScreen} />
         
         {/* Expense Screens */}
         <Stack.Screen name="ExpenseList" component={ExpenseListScreen} />
         <Stack.Screen name="AddExpense" component={AddExpenseScreen} />
+        <Stack.Screen name="EditExpense" component={EditExpenseScreen} />
         <Stack.Screen name="ExpenseDetail" component={ExpenseDetailScreen} />
         
         {/* Labor Screens */}

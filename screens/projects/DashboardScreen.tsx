@@ -415,7 +415,9 @@ export const DashboardScreen: React.FC<Props> = ({ navigation, route }) => {
               <Title>Project Details</Title>
               <Subtitle>Monitor progress and expenses</Subtitle>
             </HeaderText>
-            <Spacer />
+            <TouchableOpacity onPress={() => navigation.navigate('EditProject', { projectId })}>
+              <Ionicons name="create-outline" size={24} color={colors.primary} />
+            </TouchableOpacity>
           </HeaderContent>
         </Header>
 

@@ -162,6 +162,18 @@ const ExpenseDescription = styled.Text`
 
 const ExpenseAmountContainer = styled.View`
   align-items: flex-end;
+  flex-direction: row;
+  align-items: center;
+  gap: ${spacing.sm}px;
+`;
+
+const EditButton = styled.TouchableOpacity`
+  width: 32px;
+  height: 32px;
+  background-color: ${colors.gray[100]};
+  border-radius: ${borderRadius.round}px;
+  justify-content: center;
+  align-items: center;
 `;
 
 const ExpenseAmount = styled.Text`
@@ -367,17 +379,26 @@ export const ExpenseListScreen: React.FC = () => {
     navigation.goBack();
   };
 
-  const renderExpenseItem = ({ item }: { item: Expense }) => (
-    <TouchableOpacity onPress={() => handleExpensePress(item)}>
-      <ExpenseCard>
-        <ExpenseHeader>
-          <ExpenseInfo>
-            <ExpenseTitle>{item.title}</ExpenseTitle>
-          </ExpenseInfo>
-          <ExpenseAmountContainer>
-            <ExpenseAmount>{formatAmount(item.amount)}</ExpenseAmount>
-          </ExpenseAmountContainer>
-        </ExpenseHeader>
+  const renderExpenseItem = ({ item }: { item: Expense }) => {
+    const handleEditPress = (e: any) => {
+      e.stopPropagation(); // Prevent card's onPress from firing
+      navigation.navigate('EditExpense', { expenseId: item.id, projectId: item.projectId });
+    };
+
+    return (
+      <TouchableOpacity onPress={() => handleExpensePress(item)}>
+        <ExpenseCard>
+          <ExpenseHeader>
+            <ExpenseInfo>
+              <ExpenseTitle>{item.title}</ExpenseTitle>
+            </ExpenseInfo>
+            <ExpenseAmountContainer>
+              <ExpenseAmount>{formatAmount(item.amount)}</ExpenseAmount>
+              <EditButton onPress={handleEditPress}>
+                <Ionicons name="create-outline" size={16} color={colors.primary} />
+              </EditButton>
+            </ExpenseAmountContainer>
+          </ExpenseHeader>
         
         <ExpenseFooter>
           <CategoryBadge>
@@ -396,7 +417,8 @@ export const ExpenseListScreen: React.FC = () => {
         </ExpenseFooter>
       </ExpenseCard>
     </TouchableOpacity>
-  );
+    );
+  };
 
   const renderFilterButton = (category: ExpenseCategory | 'All') => (
     <FilterButton

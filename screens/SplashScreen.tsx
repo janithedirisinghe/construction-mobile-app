@@ -121,10 +121,10 @@ const VersionText = styled.Text`
 `;
 
 const features = [
-  { icon: '📊', text: 'Track project expenses in real-time' },
-  { icon: '👥', text: 'Manage labor attendance & wages' },
-  { icon: '💰', text: 'Monitor budget vs actual costs' },
-  { icon: '📈', text: 'Generate detailed reports' },
+  { icon: '•', text: 'Track project expenses in real-time' },
+  { icon: '•', text: 'Manage labor attendance & wages' },
+  { icon: '•', text: 'Monitor budget vs actual costs' },
+  { icon: '•', text: 'Generate detailed reports' },
 ];
 
 export const SplashScreen: React.FC<Props> = ({ onFinish }) => {
@@ -177,7 +177,7 @@ export const SplashScreen: React.FC<Props> = ({ onFinish }) => {
             <LogoText>BT</LogoText>
           </LogoCircle>
           <AppName>BuildTrack</AppName>
-          <Tagline>Construction Management Made Simple</Tagline>
+          <Tagline>Construction Budget Management</Tagline>
         </LogoContainer>
 
         <FeatureContainer>
