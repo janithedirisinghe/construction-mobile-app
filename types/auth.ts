@@ -3,7 +3,24 @@ export interface User {
   id: number;
   name: string;
   email: string;
+  mobile: string;
+  address: string;
   createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateUserData {
+  name: string;
+  email: string;
+  mobile: string;
+  address: string;
+}
+
+export interface UpdateUserData {
+  name?: string;
+  email?: string;
+  mobile?: string;
+  address?: string;
 }
 
 export interface LoginData {

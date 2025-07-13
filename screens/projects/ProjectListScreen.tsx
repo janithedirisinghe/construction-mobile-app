@@ -6,10 +6,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { HomeScreenNavigationProp } from '../../types/navigation';
 import { Project } from '../../types/project';
+import { User } from '../../types/auth';
 import { Screen } from '../../components/common/Screen';
 import { Card } from '../../components/common/Card';
 import { colors, spacing, typography, borderRadius, shadows } from '../../theme';
 import { ProjectService } from '../../services/ProjectService';
+import { UserService } from '../../services/UserService';
 
 const Header = styled.View`
   background-color: ${colors.white};
@@ -188,26 +190,35 @@ export const ProjectListScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const [projects, setProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // Mock user data - in real app, this would come from auth context
-  const userName = "John Doe";
 
   useEffect(() => {
     loadProjects();
+    loadCurrentUser();
   }, []);
 
   // Refresh data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       loadProjects(false); // Don't show loading indicator when focusing
+      loadCurrentUser(); // Also refresh user data
     }, [])
   );
 
   useEffect(() => {
     filterProjects();
   }, [projects, searchQuery]);
+
+  const loadCurrentUser = async () => {
+    try {
+      const user = await UserService.getCurrentUser();
+      setCurrentUser(user);
+    } catch (error) {
+      console.error('Error loading current user:', error);
+    }
+  };
 
   const loadProjects = async (showLoadingIndicator = true) => {
     try {
@@ -309,7 +320,7 @@ export const ProjectListScreen: React.FC = () => {
       <Header>
         <WelcomeSection>
           <WelcomeText>Welcome back,</WelcomeText>
-          <Title>{userName}</Title>
+          <Title>{currentUser?.name || 'User'}</Title>
         </WelcomeSection>
 
         <SearchSection>

@@ -3,13 +3,15 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppNavigator } from './navigation/AppNavigator';
 import { SplashScreen } from './screens/SplashScreen';
+import { UserRegistrationScreen } from './screens/auth/UserRegistrationScreen';
 import { initializeDatabase } from './database';
-import { OfflineStorageService } from './services';
+import { OfflineStorageService, UserService } from './services';
 // import { ImageSyncService } from './services'; // Online sync disabled
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [dbInitialized, setDbInitialized] = useState(false);
+  const [needsUserRegistration, setNeedsUserRegistration] = useState(false);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -18,6 +20,10 @@ export default function App() {
         await initializeDatabase();
         setDbInitialized(true);
         console.log('Database initialized successfully');
+        
+        // Check if user exists
+        const hasUsers = await UserService.hasUsers();
+        setNeedsUserRegistration(!hasUsers);
         
         // Initialize offline storage (online sync disabled)
         await OfflineStorageService.initializeStorage();
@@ -41,9 +47,23 @@ export default function App() {
     }
   };
 
+  const handleUserRegistered = async () => {
+    setNeedsUserRegistration(false);
+  };
+
   // Show splash screen while loading or database is initializing
   if (isLoading || !dbInitialized) {
     return <SplashScreen onFinish={handleSplashFinish} />;
+  }
+
+  // Show user registration if no user exists
+  if (needsUserRegistration) {
+    return (
+      <SafeAreaProvider>
+        <UserRegistrationScreen onUserRegistered={handleUserRegistered} />
+        <StatusBar style="auto" />
+      </SafeAreaProvider>
+    );
   }
 
   return (

@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ScrollView, Alert } from 'react-native';
 import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { ProfileScreenNavigationProp } from '../../types/navigation';
 import { Screen } from '../../components/common/Screen';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { colors, spacing, typography, borderRadius } from '../../theme';
+import { UserService } from '../../services/UserService';
+import { User } from '../../types/auth';
 
 const Header = styled.View`
   background-color: ${colors.white};
@@ -132,11 +134,48 @@ const LogoutButtonContainer = styled.View`
   margin-bottom: ${spacing.xxl}px;
 `;
 
+const LoadingContainer = styled.View`
+  flex: 1;
+  justify-content: center;
+  align-items: center;
+`;
+
+const LoadingText = styled.Text`
+  font-size: ${typography.sizes.lg}px;
+  color: ${colors.gray[500]};
+`;
+
 export const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadUserData();
+    }, [])
+  );
+
+  const loadUserData = async () => {
+    try {
+      setLoading(true);
+      const currentUser = await UserService.getCurrentUser();
+      setUser(currentUser);
+    } catch (error) {
+      console.error('Error loading user data:', error);
+      Alert.alert('Error', 'Failed to load profile data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleEditProfile = () => {
-    Alert.alert('Edit Profile', 'Edit profile functionality will be implemented soon.');
+    navigation.navigate('EditProfile' as any);
   };
 
   const handleSettings = () => {
@@ -149,10 +188,6 @@ export const ProfileScreen: React.FC = () => {
 
   const handleAbout = () => {
     Alert.alert('About', 'Construction App v1.0.0\nBuilt for construction project management.');
-  };
-
-  const handleDatabaseTest = () => {
-    navigation.navigate('DatabaseTest');
   };
 
   const handleLogout = () => {
@@ -173,6 +208,33 @@ export const ProfileScreen: React.FC = () => {
     );
   };
 
+  if (loading) {
+    return (
+      <Screen includeTabBarPadding={true}>
+        <LoadingContainer>
+          <LoadingText>Loading profile...</LoadingText>
+        </LoadingContainer>
+      </Screen>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Screen includeTabBarPadding={true}>
+        <LoadingContainer>
+          <LoadingText>Profile not found</LoadingText>
+          <Button
+            title="Refresh"
+            onPress={loadUserData}
+            variant="primary"
+          />
+        </LoadingContainer>
+      </Screen>
+    );
+  }
+
+  const userInitials = UserService.getUserInitials(user.name);
+
   return (
     <Screen includeTabBarPadding={true}>
       <Header>
@@ -185,11 +247,10 @@ export const ProfileScreen: React.FC = () => {
       <ScrollView showsVerticalScrollIndicator={false}>
         <ProfileSection>
           <Avatar>
-            <AvatarText>JD</AvatarText>
+            <AvatarText>{userInitials}</AvatarText>
           </Avatar>
-          <UserName>John Doe</UserName>
-          <UserEmail>john.doe@example.com</UserEmail>
-          <UserRole>Project Manager</UserRole>
+          <UserName>{user.name}</UserName>
+          <UserEmail>{user.email}</UserEmail>
         </ProfileSection>
 
         <Card padding="large">
@@ -239,26 +300,13 @@ export const ProfileScreen: React.FC = () => {
               </ChevronIcon>
             </MenuItem>
 
-            <MenuItem onPress={handleAbout}>
+            <MenuItem onPress={handleAbout} style={{ borderBottomWidth: 0 }}>
               <MenuIconContainer>
                 <Ionicons name="information-circle-outline" size={20} color={colors.gray[600]} />
               </MenuIconContainer>
               <MenuContent>
                 <MenuTitle>About</MenuTitle>
                 <MenuSubtitle>App version and information</MenuSubtitle>
-              </MenuContent>
-              <ChevronIcon>
-                <Ionicons name="chevron-forward" size={20} color={colors.gray[400]} />
-              </ChevronIcon>
-            </MenuItem>
-
-            <MenuItem onPress={handleDatabaseTest} style={{ borderBottomWidth: 0 }}>
-              <MenuIconContainer>
-                <Ionicons name="construct-outline" size={20} color={colors.gray[600]} />
-              </MenuIconContainer>
-              <MenuContent>
-                <MenuTitle>Database Test</MenuTitle>
-                <MenuSubtitle>Test SQLite functionality</MenuSubtitle>
               </MenuContent>
               <ChevronIcon>
                 <Ionicons name="chevron-forward" size={20} color={colors.gray[400]} />

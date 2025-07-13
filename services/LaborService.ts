@@ -69,6 +69,34 @@ export class LaborService {
     }
   }
 
+  // Get only inactive labor for a project
+  static async getInactiveLaborByProject(projectId: number): Promise<Labor[]> {
+    try {
+      const sql = `
+        SELECT 
+          id,
+          name,
+          role,
+          daily_rate as dailyRate,
+          contact_number as contactNumber,
+          project_id as projectId,
+          is_active as isActive,
+          synced,
+          created_at as createdAt,
+          updated_at as updatedAt
+        FROM labor 
+        WHERE project_id = ? AND is_active = 0
+        ORDER BY name ASC
+      `;
+
+      const rows = await getAllAsync(sql, [projectId]);
+      return rows.map(this.mapDbRowToLabor);
+    } catch (error) {
+      console.error('Error getting inactive labor by project:', error);
+      throw error;
+    }
+  }
+
   // Get labor by ID
   static async getLaborById(id: number): Promise<Labor | null> {
     try {
@@ -144,6 +172,42 @@ export class LaborService {
       console.log('Labor updated:', id);
     } catch (error) {
       console.error('Error updating labor:', error);
+      throw error;
+    }
+  }
+
+  // Check if labor can be deleted (has dependencies)
+  static async canDeleteLabor(id: number): Promise<{ canDelete: boolean; reason?: string }> {
+    try {
+      // Check if labor has attendance records
+      const attendanceCount = await getFirstAsync(
+        'SELECT COUNT(*) as count FROM labor_attendance WHERE labor_id = ?',
+        [id]
+      );
+      
+      if (attendanceCount && attendanceCount.count > 0) {
+        return { 
+          canDelete: false, 
+          reason: 'This laborer has attendance records and cannot be deleted.' 
+        };
+      }
+
+      // Check if labor has expense records
+      const expenseCount = await getFirstAsync(
+        'SELECT COUNT(*) as count FROM labor_expenses WHERE labor_id = ?',
+        [id]
+      );
+      
+      if (expenseCount && expenseCount.count > 0) {
+        return { 
+          canDelete: false, 
+          reason: 'This laborer has expense records and cannot be deleted.' 
+        };
+      }
+
+      return { canDelete: true };
+    } catch (error) {
+      console.error('Error checking labor dependencies:', error);
       throw error;
     }
   }
@@ -414,6 +478,20 @@ export class LaborService {
       console.log('Labor marked as synced:', id);
     } catch (error) {
       console.error('Error marking labor as synced:', error);
+      throw error;
+    }
+  }
+
+  // Reactivate an inactive laborer
+  static async reactivateLabor(id: number): Promise<void> {
+    try {
+      await executeSql(
+        'UPDATE labor SET is_active = 1, updated_at = ?, synced = 0 WHERE id = ?',
+        [getCurrentTimestamp(), id]
+      );
+      console.log('Labor reactivated:', id);
+    } catch (error) {
+      console.error('Error reactivating labor:', error);
       throw error;
     }
   }

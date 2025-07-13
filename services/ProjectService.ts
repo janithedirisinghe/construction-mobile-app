@@ -1,11 +1,18 @@
 // services/ProjectService.ts
 import { db, executeSql, getAllAsync, getFirstAsync, getCurrentTimestamp } from '../database';
 import { Project, CreateProjectData } from '../types/project';
+import { UserService } from './UserService';
 
 export class ProjectService {
   // Create a new project
   static async createProject(data: CreateProjectData): Promise<number> {
     try {
+      // Get current user
+      const currentUser = await UserService.getCurrentUser();
+      if (!currentUser) {
+        throw new Error('No user found. Please register first.');
+      }
+
       const result = await executeSql(
         `INSERT INTO projects (title, start_date, end_date, target_budget, description, user_id, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -15,7 +22,7 @@ export class ProjectService {
           data.endDate,
           data.targetBudget,
           data.description || null,
-          1, // Default user_id for now
+          currentUser.id,
           getCurrentTimestamp(),
           getCurrentTimestamp()
         ]
@@ -29,9 +36,15 @@ export class ProjectService {
     }
   }
 
-  // Get all projects
+  // Get all projects for current user
   static async getAllProjects(): Promise<Project[]> {
     try {
+      // Get current user
+      const currentUser = await UserService.getCurrentUser();
+      if (!currentUser) {
+        return [];
+      }
+
       const rows = await getAllAsync(`
         SELECT 
           id,
@@ -46,8 +59,9 @@ export class ProjectService {
           created_at as createdAt,
           updated_at as updatedAt
         FROM projects 
+        WHERE user_id = ?
         ORDER BY created_at DESC
-      `);
+      `, [currentUser.id]);
       
       return rows.map(this.mapDbRowToProject);
     } catch (error) {
@@ -56,9 +70,15 @@ export class ProjectService {
     }
   }
 
-  // Get project by ID
+  // Get project by ID (check if it belongs to current user)
   static async getProjectById(id: number): Promise<Project | null> {
     try {
+      // Get current user
+      const currentUser = await UserService.getCurrentUser();
+      if (!currentUser) {
+        return null;
+      }
+
       const row = await getFirstAsync(`
         SELECT 
           id,
@@ -73,8 +93,8 @@ export class ProjectService {
           created_at as createdAt,
           updated_at as updatedAt
         FROM projects 
-        WHERE id = ?
-      `, [id]);
+        WHERE id = ? AND user_id = ?
+      `, [id, currentUser.id]);
       
       return row ? this.mapDbRowToProject(row) : null;
     } catch (error) {
@@ -164,9 +184,15 @@ export class ProjectService {
     }
   }
 
-  // Get unsynced projects
+  // Get unsynced projects for current user
   static async getUnsyncedProjects(): Promise<Project[]> {
     try {
+      // Get current user
+      const currentUser = await UserService.getCurrentUser();
+      if (!currentUser) {
+        return [];
+      }
+
       const rows = await getAllAsync(`
         SELECT 
           id,
@@ -181,9 +207,9 @@ export class ProjectService {
           created_at as createdAt,
           updated_at as updatedAt
         FROM projects 
-        WHERE synced = 0
+        WHERE synced = 0 AND user_id = ?
         ORDER BY created_at DESC
-      `);
+      `, [currentUser.id]);
       
       return rows.map(this.mapDbRowToProject);
     } catch (error) {
