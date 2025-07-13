@@ -3,6 +3,7 @@ import { ScrollView, RefreshControl } from 'react-native';
 import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { AnalyticsScreenNavigationProp } from '../../types/navigation';
 import { Screen } from '../../components/common/Screen';
 import { Card } from '../../components/common/Card';
@@ -274,6 +275,7 @@ const CATEGORY_COLORS: { [key: string]: string } = {
 
 export const AnalyticsScreen: React.FC = () => {
   const navigation = useNavigation<AnalyticsScreenNavigationProp>();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
@@ -383,8 +385,8 @@ export const AnalyticsScreen: React.FC = () => {
       <Screen includeTabBarPadding={true}>
         <Header>
           <HeaderContent>
-            <Title>Analytics</Title>
-            <Subtitle>Loading insights...</Subtitle>
+            <Title>{t('analytics.title')}</Title>
+            <Subtitle>{t('analytics.loadingInsights')}</Subtitle>
           </HeaderContent>
         </Header>
         
@@ -392,8 +394,8 @@ export const AnalyticsScreen: React.FC = () => {
           <LoadingIcon>
             <Ionicons name="analytics-outline" size={40} color={colors.gray[400]} />
           </LoadingIcon>
-          <LoadingTitle>Loading Analytics</LoadingTitle>
-          <LoadingText>Please wait while we analyze your project data...</LoadingText>
+          <LoadingTitle>{t('analytics.loadingTitle')}</LoadingTitle>
+          <LoadingText>{t('analytics.loadingMessage')}</LoadingText>
         </LoadingContainer>
       </Screen>
     );
@@ -404,8 +406,8 @@ export const AnalyticsScreen: React.FC = () => {
       <Screen includeTabBarPadding={true}>
         <Header>
           <HeaderContent>
-            <Title>Analytics</Title>
-            <Subtitle>Project insights and statistics</Subtitle>
+            <Title>{t('analytics.title')}</Title>
+            <Subtitle>{t('analytics.subtitle')}</Subtitle>
           </HeaderContent>
         </Header>
         
@@ -413,9 +415,9 @@ export const AnalyticsScreen: React.FC = () => {
           <LoadingIcon>
             <Ionicons name="bar-chart-outline" size={40} color={colors.gray[400]} />
           </LoadingIcon>
-          <LoadingTitle>No Data Available</LoadingTitle>
+          <LoadingTitle>{t('analytics.noDataTitle')}</LoadingTitle>
           <LoadingText>
-            Start creating projects and adding expenses to see your analytics dashboard.
+            {t('analytics.noDataMessage')}
           </LoadingText>
         </LoadingContainer>
       </Screen>
@@ -437,8 +439,8 @@ export const AnalyticsScreen: React.FC = () => {
       >
         <Header>
           <HeaderContent>
-            <Title>Analytics</Title>
-            <Subtitle>Project insights and statistics</Subtitle>
+            <Title>{t('analytics.title')}</Title>
+            <Subtitle>{t('analytics.subtitle')}</Subtitle>
           </HeaderContent>
         </Header>
 
@@ -450,8 +452,8 @@ export const AnalyticsScreen: React.FC = () => {
               </StatIconContainer>
             </StatHeader>
             <StatValue>{analyticsData.totalProjects}</StatValue>
-            <StatLabel>Total Projects</StatLabel>
-            <StatChange positive={true}>{analyticsData.activeProjects} active</StatChange>
+            <StatLabel>{t('analytics.totalProjects')}</StatLabel>
+            <StatChange positive={true}>{analyticsData.activeProjects} {t('analytics.activeProjects')}</StatChange>
           </StatCard>
 
           <StatCard padding="medium">
@@ -461,9 +463,9 @@ export const AnalyticsScreen: React.FC = () => {
               </StatIconContainer>
             </StatHeader>
             <StatValue>{analyticsData.budgetUtilization.toFixed(1)}%</StatValue>
-            <StatLabel>Budget Used</StatLabel>
+            <StatLabel>{t('analytics.budgetUsed')}</StatLabel>
             <StatChange positive={analyticsData.budgetUtilization <= 90}>
-              {analyticsData.budgetUtilization > 100 ? 'Over budget' : 'On track'}
+              {analyticsData.budgetUtilization > 100 ? t('analytics.overBudget') : t('analytics.onTrack')}
             </StatChange>
           </StatCard>
 
@@ -474,8 +476,8 @@ export const AnalyticsScreen: React.FC = () => {
               </StatIconContainer>
             </StatHeader>
             <StatValue>{analyticsData.totalExpenses}</StatValue>
-            <StatLabel>Total Expenses</StatLabel>
-            <StatChange positive={true}>All time</StatChange>
+            <StatLabel>{t('analytics.totalExpenses')}</StatLabel>
+            <StatChange positive={true}>{t('analytics.allTime')}</StatChange>
           </StatCard>
 
           <StatCard padding="medium">
@@ -485,24 +487,24 @@ export const AnalyticsScreen: React.FC = () => {
               </StatIconContainer>
             </StatHeader>
             <StatValue>{formatCurrency(analyticsData.avgExpenseAmount)}</StatValue>
-            <StatLabel>Avg Expense</StatLabel>
-            <StatChange positive={true}>Per transaction</StatChange>
+            <StatLabel>{t('analytics.avgExpense')}</StatLabel>
+            <StatChange positive={true}>{t('analytics.perTransaction')}</StatChange>
           </StatCard>
         </StatsGrid>
 
         <Card padding="large">
           <ChartSection>
-            <SectionTitle>Budget Overview</SectionTitle>
+            <SectionTitle>{t('analytics.budgetOverview')}</SectionTitle>
             
             {renderProgressBar(
-              'Budget Utilization',
+              t('analytics.budgetUtilization'),
               analyticsData.totalSpent,
               analyticsData.totalBudget,
               analyticsData.budgetUtilization > 90 ? colors.error : colors.primary
             )}
             
             {renderProgressBar(
-              'Project Completion',
+              t('analytics.projectCompletion'),
               analyticsData.completedProjects,
               analyticsData.totalProjects,
               colors.success
@@ -512,7 +514,7 @@ export const AnalyticsScreen: React.FC = () => {
 
         <Card padding="large">
           <ChartSection>
-            <SectionTitle>Expense Categories</SectionTitle>
+            <SectionTitle>{t('analytics.expenseCategories')}</SectionTitle>
             
             <CategoryContainer>
               {Object.entries(analyticsData.expensesByCategory)
@@ -533,7 +535,7 @@ export const AnalyticsScreen: React.FC = () => {
 
         <Card padding="large">
           <RecentActivity>
-            <SectionTitle>Recent Activity</SectionTitle>
+            <SectionTitle>{t('analytics.recentActivity')}</SectionTitle>
             
             {analyticsData.recentExpenses.map((expense, index) => (
               <ActivityItem 
