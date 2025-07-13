@@ -4,6 +4,7 @@ import { FlatList, TouchableOpacity, Alert } from 'react-native';
 import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { LaborManagementScreenNavigationProp, LaborManagementScreenRouteProp } from '../../types/navigation';
 import { Labor, LaborAttendance } from '../../types/labor';
 import { Screen } from '../../components/common/Screen';
@@ -227,6 +228,7 @@ const EmptyText = styled.Text`
 
 export const LaborManagementScreen: React.FC<Props> = ({ navigation, route }) => {
   const { projectId } = route.params;
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'laborers' | 'attendance'>('laborers');
   const [laborers, setLaborers] = useState<Labor[]>([]);
   const [showInactive, setShowInactive] = useState(false);
@@ -326,7 +328,7 @@ export const LaborManagementScreen: React.FC<Props> = ({ navigation, route }) =>
               <LaborRole>{item.role}</LaborRole>
               {showInactive && (
                 <StatusBadge isActive={item.isActive}>
-                  <StatusText>{item.isActive ? 'Active' : 'Inactive'}</StatusText>
+                  <StatusText>{item.isActive ? t('labor.activeProjects') : 'Inactive'}</StatusText>
                 </StatusBadge>
               )}
             </LaborInfo>
@@ -335,13 +337,13 @@ export const LaborManagementScreen: React.FC<Props> = ({ navigation, route }) =>
           
           {activeTab === 'attendance' && item.isActive && (
             <AttendanceContainer>
-              <AttendanceText>Today's Attendance</AttendanceText>
+              <AttendanceText>{t('labor.dailyAttendance')}</AttendanceText>
               <AttendanceButton 
                 isPresent={isPresent}
                 onPress={() => toggleAttendance(item.id)}
               >
                 <AttendanceButtonText isPresent={isPresent}>
-                  {isPresent ? 'Present' : 'Absent'}
+                  {isPresent ? t('labor.present') : t('labor.absent')}
                 </AttendanceButtonText>
               </AttendanceButton>
             </AttendanceContainer>
@@ -356,8 +358,8 @@ export const LaborManagementScreen: React.FC<Props> = ({ navigation, route }) =>
       <Ionicons name="people-outline" size={64} color={colors.gray[400]} />
       <EmptyText>
         {showInactive 
-          ? 'No inactive laborers found.' 
-          : 'No laborers added yet.\nAdd your first laborer!'
+          ? t('labor.noWorkers')
+          : t('labor.noWorkersMessage')
         }
       </EmptyText>
     </EmptyContainer>
@@ -368,7 +370,7 @@ export const LaborManagementScreen: React.FC<Props> = ({ navigation, route }) =>
       <Screen>
         <EmptyContainer>
           <Ionicons name="time-outline" size={64} color={colors.gray[400]} />
-          <EmptyText>Loading labor data...</EmptyText>
+          <EmptyText>{t('labor.loading')}</EmptyText>
         </EmptyContainer>
       </Screen>
     );
@@ -395,8 +397,8 @@ export const LaborManagementScreen: React.FC<Props> = ({ navigation, route }) =>
             <Ionicons name="arrow-back" size={24} color={colors.gray[900]} />
           </BackButton>
           <HeaderText>
-            <Title>Labor Management</Title>
-            <Subtitle>{totalLaborers} {showInactive ? 'inactive' : 'active'} laborers • {presentCount} present today</Subtitle>
+            <Title>{t('labor.title')}</Title>
+            <Subtitle>{totalLaborers} {showInactive ? 'inactive' : 'active'} {t('labor.workers').toLowerCase()} • {presentCount} {t('labor.presentToday').toLowerCase()}</Subtitle>
           </HeaderText>
           <HeaderActionRow>
             <FilterButton 
@@ -422,21 +424,21 @@ export const LaborManagementScreen: React.FC<Props> = ({ navigation, route }) =>
             <ActionIcon>
               <Ionicons name="checkmark-circle-outline" size={24} color={colors.primary} />
             </ActionIcon>
-            <ActionText>Mark{'\n'}Attendance</ActionText>
+            <ActionText>{t('labor.markAttendance').replace(' ', '\n')}</ActionText>
           </ActionButton>
           
           <ActionButton onPress={handleAttendanceHistory}>
             <ActionIcon>
               <Ionicons name="calendar-outline" size={24} color={colors.primary} />
             </ActionIcon>
-            <ActionText>Attendance{'\n'}History</ActionText>
+            <ActionText>{t('labor.attendanceHistory').replace(' ', '\n')}</ActionText>
           </ActionButton>
           
           <ActionButton onPress={handleAddLabor}>
             <ActionIcon>
               <Ionicons name="person-add-outline" size={24} color={colors.primary} />
             </ActionIcon>
-            <ActionText>Add{'\n'}Laborer</ActionText>
+            <ActionText>{t('labor.addWorker').replace(' ', '\n')}</ActionText>
           </ActionButton>
         </ActionRow>
       </QuickActionsSection>
@@ -446,13 +448,13 @@ export const LaborManagementScreen: React.FC<Props> = ({ navigation, route }) =>
           active={activeTab === 'laborers'} 
           onPress={() => setActiveTab('laborers')}
         >
-          <TabText active={activeTab === 'laborers'}>Laborers ({laborers.length})</TabText>
+          <TabText active={activeTab === 'laborers'}>{t('labor.workers')} ({laborers.length})</TabText>
         </Tab>
         <Tab 
           active={activeTab === 'attendance'} 
           onPress={() => setActiveTab('attendance')}
         >
-          <TabText active={activeTab === 'attendance'}>Quick Attendance</TabText>
+          <TabText active={activeTab === 'attendance'}>{t('labor.attendance')}</TabText>
         </Tab>
       </TabContainer>
 
@@ -466,7 +468,7 @@ export const LaborManagementScreen: React.FC<Props> = ({ navigation, route }) =>
 
       {activeTab === 'attendance' && presentCount > 0 && (
         <Card style={{ marginTop: spacing.md }}>
-          <AttendanceText>Today's Total: {presentCount} workers • {formatCurrency(totalCost)}</AttendanceText>
+          <AttendanceText>{t('labor.totalWorkers')}: {presentCount} {t('labor.workers').toLowerCase()} • {formatCurrency(totalCost)}</AttendanceText>
         </Card>
       )}
     </Screen>
