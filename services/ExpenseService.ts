@@ -8,8 +8,8 @@ export class ExpenseService {
   static async createExpense(data: CreateExpenseData): Promise<number> {
     try {
       const result = await executeSql(
-        `INSERT INTO expenses (title, amount, category, expense_date, notes, receipt_url, project_id, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO expenses (title, amount, category, expense_date, notes, receipt_url, offline_receipt_id, project_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           data.title,
           data.amount,
@@ -17,6 +17,7 @@ export class ExpenseService {
           data.expenseDate,
           data.notes || null,
           data.receiptUrl || null,
+          data.offlineReceiptId || null,
           data.projectId,
           getCurrentTimestamp(),
           getCurrentTimestamp()

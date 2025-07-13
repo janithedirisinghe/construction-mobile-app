@@ -1,6 +1,6 @@
 // screens/expenses/EditExpenseScreen.tsx
 import React, { useState, useEffect } from 'react';
-import { ScrollView, Alert, View, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
+import { ScrollView, Alert, View, TouchableOpacity, Platform, ActivityIndicator, Image, Modal } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +16,8 @@ import {
 import { CreateExpenseData, ExpenseCategory, EXPENSE_CATEGORIES, Expense } from '../../types/expense';
 import { colors, spacing, typography, borderRadius, shadows } from '../../theme';
 import { ExpenseService } from '../../services/ExpenseService';
+import { useImagePicker } from '../../hooks/useImagePicker';
+import { OfflineImage } from '../../services/OfflineStorageService';
 
 const Header = styled.View`
   background-color: ${colors.white};
@@ -201,6 +203,97 @@ const LoadingText = styled.Text`
   margin-top: ${spacing.md}px;
 `;
 
+// Receipt styling components
+const ReceiptSection = styled.View`
+  margin-top: ${spacing.lg}px;
+`;
+
+const ReceiptButton = styled.TouchableOpacity`
+  background-color: ${colors.gray[100]};
+  padding: ${spacing.md}px;
+  border-radius: ${borderRadius.md}px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: ${spacing.sm}px;
+  border: 2px dashed ${colors.gray[300]};
+`;
+
+const ReceiptText = styled.Text`
+  color: ${colors.gray[600]};
+  font-size: ${typography.sizes.md}px;
+  font-weight: ${typography.weights.medium};
+`;
+
+const ReceiptPreview = styled.View`
+  margin-top: ${spacing.md}px;
+  border-radius: ${borderRadius.md}px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid ${colors.gray[300]};
+`;
+
+const ReceiptImage = styled.Image`
+  width: 100%;
+  height: 200px;
+  border-radius: ${borderRadius.md}px;
+`;
+
+const RemoveReceiptButton = styled.TouchableOpacity`
+  position: absolute;
+  top: ${spacing.sm}px;
+  right: ${spacing.sm}px;
+  background-color: ${colors.error};
+  width: 24px;
+  height: 24px;
+  border-radius: 12px;
+  justify-content: center;
+  align-items: center;
+`;
+
+const ModalContainer = styled.View`
+  flex: 1;
+  background-color: ${colors.black};
+  justify-content: center;
+  align-items: center;
+`;
+
+const ModalHeader = styled.View`
+  position: absolute;
+  top: 60px;
+  left: 0;
+  right: 0;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 ${spacing.lg}px;
+  z-index: 1000;
+`;
+
+const ModalCloseButton = styled.TouchableOpacity`
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: ${spacing.sm}px;
+  border-radius: ${borderRadius.round}px;
+`;
+
+const ModalTitle = styled.Text`
+  color: ${colors.white};
+  font-size: ${typography.sizes.lg}px;
+  font-weight: ${typography.weights.bold};
+`;
+
+const ImageContainer = styled.View`
+  width: 100%;
+  height: 70%;
+  justify-content: center;
+  align-items: center;
+`;
+
+const ReceiptImageFull = styled.Image`
+  width: 100%;
+  height: 100%;
+`;
+
 interface FormData extends CreateExpenseData {
   id?: number;
 }
@@ -211,12 +304,14 @@ interface FormErrors {
   category?: string;
   expenseDate?: string;
   notes?: string;
+  receiptUrl?: string;
 }
 
 export const EditExpenseScreen: React.FC = () => {
   const navigation = useNavigation<EditExpenseScreenNavigationProp>();
   const route = useRoute<EditExpenseScreenRouteProp>();
   const { expenseId, projectId } = route.params;
+  const { showImagePicker, loading: imageLoading } = useImagePicker();
 
   const [expense, setExpense] = useState<Expense | null>(null);
   const [formData, setFormData] = useState<FormData>({
@@ -232,6 +327,8 @@ export const EditExpenseScreen: React.FC = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempDate, setTempDate] = useState(new Date());
+  const [attachedReceipt, setAttachedReceipt] = useState<OfflineImage | null>(null);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
 
   useEffect(() => {
     loadExpense();
@@ -255,8 +352,24 @@ export const EditExpenseScreen: React.FC = () => {
         category: expenseData.category,
         expenseDate: expenseData.expenseDate,
         notes: expenseData.notes || '',
+        receiptUrl: expenseData.receiptUrl,
         projectId: expenseData.projectId,
       });
+      
+      // If there's an existing receipt, set it for preview
+      if (expenseData.receiptUrl) {
+        setAttachedReceipt({
+          id: expenseData.id.toString(),
+          localUri: expenseData.receiptUrl,
+          originalUri: expenseData.receiptUrl,
+          filename: `receipt_${expenseData.id}.jpg`,
+          mimeType: 'image/jpeg',
+          size: 0, // We don't have size info for existing receipts
+          expenseId: expenseData.id.toString(),
+          synced: true,
+          createdAt: expenseData.createdAt
+        });
+      }
     } catch (error) {
       console.error('Error loading expense:', error);
       Alert.alert('Error', 'Failed to load expense details');
@@ -312,6 +425,8 @@ export const EditExpenseScreen: React.FC = () => {
         category: formData.category,
         expenseDate: formData.expenseDate,
         notes: formData.notes?.trim(),
+        receiptUrl: attachedReceipt?.localUri,
+        offlineReceiptId: attachedReceipt?.id,
       };
 
       await ExpenseService.updateExpense(expenseId, updateData);
@@ -414,6 +529,25 @@ export const EditExpenseScreen: React.FC = () => {
     return amount.toLocaleString();
   };
 
+  const handleAttachReceipt = async () => {
+    const selectedImage = await showImagePicker();
+    if (selectedImage) {
+      setAttachedReceipt(selectedImage);
+      updateField('receiptUrl', selectedImage.localUri);
+    }
+  };
+
+  const handleRemoveReceipt = () => {
+    setAttachedReceipt(null);
+    updateField('receiptUrl', undefined);
+  };
+
+  const handleViewReceiptModal = () => {
+    if (attachedReceipt) {
+      setShowReceiptModal(true);
+    }
+  };
+
   if (initialLoading) {
     return (
       <Screen>
@@ -509,6 +643,35 @@ export const EditExpenseScreen: React.FC = () => {
               numberOfLines={3}
             />
           </FormSection>
+
+          <FormSection>
+            <SectionTitle>Receipt</SectionTitle>
+            <ReceiptButton onPress={handleAttachReceipt} disabled={imageLoading}>
+              {imageLoading ? (
+                <ActivityIndicator size="small" color={colors.gray[700]} />
+              ) : (
+                <Ionicons name="camera" size={20} color={colors.gray[700]} />
+              )}
+              <ReceiptText>
+                {attachedReceipt ? 'Change Receipt' : 'Attach Receipt'}
+              </ReceiptText>
+            </ReceiptButton>
+            
+            {attachedReceipt && (
+              <ReceiptPreview>
+                <TouchableOpacity onPress={handleViewReceiptModal}>
+                  <ReceiptImage 
+                    source={{ uri: attachedReceipt.localUri }} 
+                    resizeMode="cover" 
+                  />
+                </TouchableOpacity>
+                <RemoveReceiptButton onPress={handleRemoveReceipt}>
+                  <Ionicons name="close" size={12} color={colors.white} />
+                </RemoveReceiptButton>
+              </ReceiptPreview>
+            )}
+            {errors.receiptUrl && <ErrorText>{errors.receiptUrl}</ErrorText>}
+          </FormSection>
         </FormContainer>
 
         <ButtonContainer>
@@ -538,6 +701,29 @@ export const EditExpenseScreen: React.FC = () => {
             <ActionButtonText variant="danger">Delete Expense</ActionButtonText>
           </ActionButton>
         </ButtonContainer>
+
+        {/* Receipt Image Modal */}
+        {showReceiptModal && attachedReceipt && (
+          <Modal
+            visible={showReceiptModal}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setShowReceiptModal(false)}
+          >
+            <ModalContainer>
+              <ModalHeader>
+                <ModalTitle>Receipt</ModalTitle>
+                <ModalCloseButton onPress={() => setShowReceiptModal(false)}>
+                  <Ionicons name="close" size={24} color={colors.white} />
+                </ModalCloseButton>
+              </ModalHeader>
+
+              <ImageContainer>
+                <ReceiptImageFull source={{ uri: attachedReceipt.localUri }} resizeMode="contain" />
+              </ImageContainer>
+            </ModalContainer>
+          </Modal>
+        )}
 
         {showDatePicker && (
           <DateTimePicker

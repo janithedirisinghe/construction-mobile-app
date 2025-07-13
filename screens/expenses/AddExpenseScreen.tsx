@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, Alert, View, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
+import { ScrollView, Alert, View, TouchableOpacity, Platform, ActivityIndicator, Image } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +15,8 @@ import {
 import { CreateExpenseData, ExpenseCategory, EXPENSE_CATEGORIES } from '../../types/expense';
 import { colors, spacing, typography, borderRadius, shadows } from '../../theme';
 import { ExpenseService } from '../../services/ExpenseService';
+import { useImagePicker } from '../../hooks/useImagePicker';
+import { OfflineImage } from '../../services/OfflineStorageService';
 
 const Header = styled.View`
   background-color: ${colors.white};
@@ -202,10 +204,36 @@ const ErrorText = styled.Text`
   margin-top: ${spacing.xs}px;
 `;
 
+const ReceiptPreview = styled.View`
+  margin-top: ${spacing.sm}px;
+  border-radius: ${borderRadius.lg}px;
+  overflow: hidden;
+  position: relative;
+`;
+
+const ReceiptImage = styled.Image`
+  width: 100%;
+  height: 150px;
+  background-color: ${colors.gray[100]};
+`;
+
+const RemoveReceiptButton = styled.TouchableOpacity`
+  position: absolute;
+  top: ${spacing.sm}px;
+  right: ${spacing.sm}px;
+  background-color: ${colors.error};
+  border-radius: ${borderRadius.round}px;
+  width: 24px;
+  height: 24px;
+  justify-content: center;
+  align-items: center;
+`;
+
 export const AddExpenseScreen: React.FC = () => {
   const navigation = useNavigation<AddExpenseScreenNavigationProp>();
   const route = useRoute<AddExpenseScreenRouteProp>();
   const { projectId } = route.params;
+  const { showImagePicker, loading: imageLoading } = useImagePicker();
 
   const [formData, setFormData] = useState<CreateExpenseData>({
     title: '',
@@ -220,6 +248,7 @@ export const AddExpenseScreen: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempDate, setTempDate] = useState(new Date());
+  const [attachedReceipt, setAttachedReceipt] = useState<OfflineImage | null>(null);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -254,7 +283,8 @@ export const AddExpenseScreen: React.FC = () => {
         category: formData.category,
         expenseDate: formData.expenseDate,
         notes: formData.notes,
-        receiptUrl: formData.receiptUrl,
+        receiptUrl: attachedReceipt?.localUri, // Store local URI (offline only)
+        offlineReceiptId: attachedReceipt?.id, // Store receipt ID for future sync
         projectId: projectId
       };
       
@@ -262,7 +292,7 @@ export const AddExpenseScreen: React.FC = () => {
       
       Alert.alert(
         'Success',
-        'Expense added successfully!',
+        'Expense added successfully! (Stored offline)',
         [
           {
             text: 'OK',
@@ -282,16 +312,17 @@ export const AddExpenseScreen: React.FC = () => {
     navigation.goBack();
   };
 
-  const handleAttachReceipt = () => {
-    Alert.alert(
-      'Attach Receipt',
-      'Choose an option',
-      [
-        { text: 'Camera', onPress: () => console.log('Camera') },
-        { text: 'Gallery', onPress: () => console.log('Gallery') },
-        { text: 'Cancel', style: 'cancel' }
-      ]
-    );
+  const handleAttachReceipt = async () => {
+    const selectedImage = await showImagePicker();
+    if (selectedImage) {
+      setAttachedReceipt(selectedImage);
+      updateFormData('receiptUrl', selectedImage.localUri);
+    }
+  };
+
+  const handleRemoveReceipt = () => {
+    setAttachedReceipt(null);
+    updateFormData('receiptUrl', undefined);
   };
 
   const updateFormData = (field: keyof CreateExpenseData, value: any) => {
@@ -428,10 +459,25 @@ export const AddExpenseScreen: React.FC = () => {
 
           <FormSection>
             <SectionTitle>Receipt</SectionTitle>
-            <ReceiptButton onPress={handleAttachReceipt}>
-              <Ionicons name="camera" size={20} color={colors.gray[700]} />
-              <ReceiptText>Attach Receipt</ReceiptText>
+            <ReceiptButton onPress={handleAttachReceipt} disabled={imageLoading}>
+              {imageLoading ? (
+                <ActivityIndicator size="small" color={colors.gray[700]} />
+              ) : (
+                <Ionicons name="camera" size={20} color={colors.gray[700]} />
+              )}
+              <ReceiptText>
+                {attachedReceipt ? 'Change Receipt' : 'Attach Receipt (Offline Only)'}
+              </ReceiptText>
             </ReceiptButton>
+            
+            {attachedReceipt && (
+              <ReceiptPreview>
+                <ReceiptImage source={{ uri: attachedReceipt.localUri }} resizeMode="cover" />
+                <RemoveReceiptButton onPress={handleRemoveReceipt}>
+                  <Ionicons name="close" size={12} color={colors.white} />
+                </RemoveReceiptButton>
+              </ReceiptPreview>
+            )}
           </FormSection>
         </FormContainer>
 

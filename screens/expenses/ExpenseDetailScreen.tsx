@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ScrollView, Alert, Share } from 'react-native';
+import { ScrollView, Alert, Share, Modal, Dimensions, Image } from 'react-native';
 import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
@@ -138,18 +138,18 @@ const NotesText = styled.Text`
 
 const ReceiptContainer = styled.TouchableOpacity`
   background-color: ${colors.gray[100]};
-  padding: ${spacing.lg}px;
   border-radius: ${borderRadius.md}px;
-  align-items: center;
-  justify-content: center;
+  overflow: hidden;
   margin-top: ${spacing.sm}px;
-  border: 2px dashed ${colors.gray[300]};
+  border: 1px solid ${colors.gray[300]};
 `;
 
 const ReceiptText = styled.Text`
   color: ${colors.gray[600]};
-  font-size: ${typography.sizes.md}px;
-  margin-top: ${spacing.sm}px;
+  font-size: ${typography.sizes.sm}px;
+  text-align: center;
+  padding: ${spacing.sm}px;
+  background-color: rgba(255, 255, 255, 0.9);
 `;
 
 const ButtonContainer = styled.View`
@@ -210,6 +210,55 @@ const LoadingText = styled.Text`
   color: ${colors.gray[500]};
 `;
 
+const ReceiptImage = styled.Image`
+  width: 100%;
+  height: 200px;
+  border-radius: ${borderRadius.md}px;
+`;
+
+const ReceiptImageFull = styled.Image`
+  width: 100%;
+  height: 100%;
+`;
+
+const ModalContainer = styled.View`
+  flex: 1;
+  background-color: ${colors.black};
+  justify-content: center;
+  align-items: center;
+`;
+
+const ModalHeader = styled.View`
+  position: absolute;
+  top: 60px;
+  left: 0;
+  right: 0;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 ${spacing.lg}px;
+  z-index: 1000;
+`;
+
+const ModalCloseButton = styled.TouchableOpacity`
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: ${spacing.sm}px;
+  border-radius: ${borderRadius.round}px;
+`;
+
+const ModalTitle = styled.Text`
+  color: ${colors.white};
+  font-size: ${typography.sizes.lg}px;
+  font-weight: ${typography.weights.bold};
+`;
+
+const ImageContainer = styled.View`
+  width: 100%;
+  height: 70%;
+  justify-content: center;
+  align-items: center;
+`;
+
 export const ExpenseDetailScreen: React.FC = () => {
   const navigation = useNavigation<ExpenseDetailScreenNavigationProp>();
   const route = useRoute<ExpenseDetailScreenRouteProp>();
@@ -217,6 +266,7 @@ export const ExpenseDetailScreen: React.FC = () => {
 
   const [expense, setExpense] = useState<Expense | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
 
   useEffect(() => {
     loadExpenseDetails();
@@ -318,7 +368,11 @@ export const ExpenseDetailScreen: React.FC = () => {
   };
 
   const handleViewReceipt = () => {
-    Alert.alert('View Receipt', 'Receipt viewing functionality will be implemented soon.');
+    if (expense?.receiptUrl) {
+      setShowReceiptModal(true);
+    } else {
+      Alert.alert('No Receipt', 'No receipt attached to this expense.');
+    }
   };
 
   if (loading) {
@@ -407,8 +461,11 @@ export const ExpenseDetailScreen: React.FC = () => {
             <DetailSection>
               <SectionTitle>Receipt</SectionTitle>
               <ReceiptContainer onPress={handleViewReceipt}>
-                <Ionicons name="document-text-outline" size={32} color={colors.gray[500]} />
-                <ReceiptText>Tap to view receipt</ReceiptText>
+                <ReceiptImage 
+                  source={{ uri: expense.receiptUrl }} 
+                  resizeMode="cover"
+                />
+                <ReceiptText>Tap to view full size</ReceiptText>
               </ReceiptContainer>
             </DetailSection>
           )}
@@ -433,6 +490,31 @@ export const ExpenseDetailScreen: React.FC = () => {
           </DeleteButton>
         </DeleteButtonContainer>
       </ScrollView>
+
+      {/* Receipt Image Modal */}
+      <Modal
+        visible={showReceiptModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowReceiptModal(false)}
+      >
+        <ModalContainer>
+          <ModalHeader>
+            <ModalTitle>Receipt</ModalTitle>
+            <ModalCloseButton onPress={() => setShowReceiptModal(false)}>
+              <Ionicons name="close" size={24} color={colors.white} />
+            </ModalCloseButton>
+          </ModalHeader>
+          <ImageContainer>
+            {expense?.receiptUrl && (
+              <ReceiptImageFull 
+                source={{ uri: expense.receiptUrl }} 
+                resizeMode="contain"
+              />
+            )}
+          </ImageContainer>
+        </ModalContainer>
+      </Modal>
     </Screen>
   );
 };

@@ -45,6 +45,16 @@ export const initializeDatabase = async (): Promise<void> => {
       );
     `);
 
+    // Add offline_receipt_id column if it doesn't exist (for offline image tracking)
+    try {
+      await db.execAsync(`
+        ALTER TABLE expenses ADD COLUMN offline_receipt_id TEXT;
+      `);
+    } catch (error) {
+      // Column might already exist, ignore the error
+      console.log('offline_receipt_id column already exists or error:', error);
+    }
+
     // Labor table
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS labor (
