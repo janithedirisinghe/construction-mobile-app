@@ -15,8 +15,8 @@ import {
 import { CreateExpenseData, ExpenseCategory, EXPENSE_CATEGORIES } from '../../types/expense';
 import { colors, spacing, typography, borderRadius, shadows } from '../../theme';
 import { ExpenseService } from '../../services/ExpenseService';
-import { useImagePicker } from '../../hooks/useImagePicker';
-import { OfflineImage } from '../../services/OfflineStorageService';
+import { useFilePicker } from '../../hooks/useFilePicker';
+import { OfflineFile, OfflineStorageService } from '../../services/OfflineStorageService';
 
 const Header = styled.View`
   background-color: ${colors.white};
@@ -229,11 +229,78 @@ const RemoveReceiptButton = styled.TouchableOpacity`
   align-items: center;
 `;
 
+const FilesContainer = styled.View`
+  margin-top: ${spacing.sm}px;
+`;
+
+const FilesList = styled.ScrollView`
+  max-height: 200px;
+`;
+
+const FileItem = styled.View`
+  flex-direction: row;
+  align-items: center;
+  background-color: ${colors.gray[100]};
+  border: 1px solid ${colors.gray[200]};
+  border-radius: ${borderRadius.lg}px;
+  padding: ${spacing.sm}px;
+  margin-bottom: ${spacing.xs}px;
+`;
+
+const FilePreview = styled.View`
+  width: 40px;
+  height: 40px;
+  border-radius: ${borderRadius.md}px;
+  background-color: ${colors.gray[200]};
+  justify-content: center;
+  align-items: center;
+  margin-right: ${spacing.sm}px;
+`;
+
+const FileImage = styled.Image`
+  width: 40px;
+  height: 40px;
+  border-radius: ${borderRadius.md}px;
+`;
+
+const FileInfo = styled.View`
+  flex: 1;
+  margin-right: ${spacing.sm}px;
+`;
+
+const FileName = styled.Text`
+  font-size: ${typography.sizes.sm}px;
+  font-weight: ${typography.weights.medium};
+  color: ${colors.gray[900]};
+`;
+
+const FileType = styled.Text`
+  font-size: ${typography.sizes.xs}px;
+  color: ${colors.gray[600]};
+  margin-top: 2px;
+`;
+
+const RemoveFileButton = styled.TouchableOpacity`
+  background-color: ${colors.error};
+  border-radius: ${borderRadius.round}px;
+  width: 20px;
+  height: 20px;
+  justify-content: center;
+  align-items: center;
+`;
+
+const FilesCountText = styled.Text`
+  font-size: ${typography.sizes.sm}px;
+  color: ${colors.gray[600]};
+  margin-top: ${spacing.xs}px;
+  text-align: center;
+`;
+
 export const AddExpenseScreen: React.FC = () => {
   const navigation = useNavigation<AddExpenseScreenNavigationProp>();
   const route = useRoute<AddExpenseScreenRouteProp>();
   const { projectId } = route.params;
-  const { showImagePicker, loading: imageLoading } = useImagePicker();
+  const { showFilePicker, loading: fileLoading } = useFilePicker();
 
   const [formData, setFormData] = useState<CreateExpenseData>({
     title: '',
@@ -248,7 +315,7 @@ export const AddExpenseScreen: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempDate, setTempDate] = useState(new Date());
-  const [attachedReceipt, setAttachedReceipt] = useState<OfflineImage | null>(null);
+  const [attachedFiles, setAttachedFiles] = useState<OfflineFile[]>([]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -283,16 +350,24 @@ export const AddExpenseScreen: React.FC = () => {
         category: formData.category,
         expenseDate: formData.expenseDate,
         notes: formData.notes,
-        receiptUrl: attachedReceipt?.localUri, // Store local URI (offline only)
-        offlineReceiptId: attachedReceipt?.id, // Store receipt ID for future sync
+        receiptUrl: attachedFiles.length > 0 ? attachedFiles[0].localUri : undefined, // Store primary file URI (offline only)
+        offlineReceiptId: attachedFiles.length > 0 ? attachedFiles[0].id : undefined, // Store primary file ID for future sync
+        attachedFileIds: attachedFiles.map(file => file.id), // Store all file IDs
         projectId: projectId
       };
       
-      await ExpenseService.createExpense(expenseData);
+      const expenseId = await ExpenseService.createExpense(expenseData);
+      
+      // Associate all attached files with the created expense
+      if (attachedFiles.length > 0 && expenseId) {
+        for (const file of attachedFiles) {
+          await OfflineStorageService.associateFileWithExpense(file.id, expenseId.toString());
+        }
+      }
       
       Alert.alert(
         'Success',
-        'Expense added successfully! (Stored offline)',
+        `Expense added successfully with ${attachedFiles.length} attached file(s)! (Stored offline)`,
         [
           {
             text: 'OK',
@@ -312,17 +387,37 @@ export const AddExpenseScreen: React.FC = () => {
     navigation.goBack();
   };
 
-  const handleAttachReceipt = async () => {
-    const selectedImage = await showImagePicker();
-    if (selectedImage) {
-      setAttachedReceipt(selectedImage);
-      updateFormData('receiptUrl', selectedImage.localUri);
+  const handleAttachFiles = async () => {
+    const selectedFiles = await showFilePicker(true);
+    if (selectedFiles.length > 0) {
+      setAttachedFiles(prevFiles => [...prevFiles, ...selectedFiles]);
     }
   };
 
-  const handleRemoveReceipt = () => {
-    setAttachedReceipt(null);
-    updateFormData('receiptUrl', undefined);
+  const handleRemoveFile = (fileId: string) => {
+    setAttachedFiles(prevFiles => prevFiles.filter(file => file.id !== fileId));
+  };
+
+  const getFileIcon = (fileType: string) => {
+    switch (fileType) {
+      case 'image':
+        return 'image' as const;
+      case 'pdf':
+        return 'document-text' as const;
+      default:
+        return 'document' as const;
+    }
+  };
+
+  const getFileTypeLabel = (fileType: string): string => {
+    switch (fileType) {
+      case 'image':
+        return 'Image';
+      case 'pdf':
+        return 'PDF Document';
+      default:
+        return 'Document';
+    }
   };
 
   const updateFormData = (field: keyof CreateExpenseData, value: any) => {
@@ -458,25 +553,52 @@ export const AddExpenseScreen: React.FC = () => {
           </FormSection>
 
           <FormSection>
-            <SectionTitle>Receipt</SectionTitle>
-            <ReceiptButton onPress={handleAttachReceipt} disabled={imageLoading}>
-              {imageLoading ? (
+            <SectionTitle>Attachments</SectionTitle>
+            <ReceiptButton onPress={handleAttachFiles} disabled={fileLoading}>
+              {fileLoading ? (
                 <ActivityIndicator size="small" color={colors.gray[700]} />
               ) : (
-                <Ionicons name="camera" size={20} color={colors.gray[700]} />
+                <Ionicons name="attach" size={20} color={colors.gray[700]} />
               )}
               <ReceiptText>
-                {attachedReceipt ? 'Change Receipt' : 'Attach Receipt (Offline Only)'}
+                Attach Files (Images, PDFs - Offline Only)
               </ReceiptText>
             </ReceiptButton>
             
-            {attachedReceipt && (
-              <ReceiptPreview>
-                <ReceiptImage source={{ uri: attachedReceipt.localUri }} resizeMode="cover" />
-                <RemoveReceiptButton onPress={handleRemoveReceipt}>
-                  <Ionicons name="close" size={12} color={colors.white} />
-                </RemoveReceiptButton>
-              </ReceiptPreview>
+            {attachedFiles.length > 0 && (
+              <FilesContainer>
+                <FilesCountText>
+                  {attachedFiles.length} file(s) attached
+                </FilesCountText>
+                <FilesList showsVerticalScrollIndicator={false}>
+                  {attachedFiles.map((file) => (
+                    <FileItem key={file.id}>
+                      <FilePreview>
+                        {file.fileType === 'image' ? (
+                          <FileImage source={{ uri: file.localUri }} resizeMode="cover" />
+                        ) : (
+                          <Ionicons 
+                            name={getFileIcon(file.fileType)} 
+                            size={20} 
+                            color={colors.primary} 
+                          />
+                        )}
+                      </FilePreview>
+                      <FileInfo>
+                        <FileName numberOfLines={1}>
+                          {file.filename}
+                        </FileName>
+                        <FileType>
+                          {getFileTypeLabel(file.fileType)} • {(file.size / 1024).toFixed(1)} KB
+                        </FileType>
+                      </FileInfo>
+                      <RemoveFileButton onPress={() => handleRemoveFile(file.id)}>
+                        <Ionicons name="close" size={12} color={colors.white} />
+                      </RemoveFileButton>
+                    </FileItem>
+                  ))}
+                </FilesList>
+              </FilesContainer>
             )}
           </FormSection>
         </FormContainer>

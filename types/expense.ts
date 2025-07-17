@@ -7,6 +7,7 @@ export interface Expense {
   expenseDate: string;
   notes?: string;
   receiptUrl?: string;
+  attachedFiles?: string[]; // Array of file IDs/URLs for multiple attachments
   projectId: number;
   createdAt: string;
 }
@@ -19,6 +20,7 @@ export interface CreateExpenseData {
   notes?: string;
   receiptUrl?: string;
   offlineReceiptId?: string; // For offline image tracking (online sync disabled)
+  attachedFileIds?: string[]; // Array of offline file IDs for multiple attachments
   projectId: number;
 }
 
