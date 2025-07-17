@@ -4,6 +4,7 @@ import { FlatList, TouchableOpacity, TextInput } from 'react-native';
 import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { HomeScreenNavigationProp } from '../../types/navigation';
 import { Project } from '../../types/project';
 import { User } from '../../types/auth';
@@ -188,6 +189,7 @@ const EmptyText = styled.Text`
 
 export const ProjectListScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
+  const { t } = useTranslation();
   const [projects, setProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -277,15 +279,15 @@ export const ProjectListScreen: React.FC = () => {
 
           <BudgetInfo>
             <BudgetItem>
-              <BudgetLabel>Budget</BudgetLabel>
+              <BudgetLabel>{t('projects.budget')}</BudgetLabel>
               <BudgetValue>{formatCurrency(item.targetBudget)}</BudgetValue>
             </BudgetItem>
             <BudgetItem>
-              <BudgetLabel>Spent</BudgetLabel>
+              <BudgetLabel>{t('projects.spent')}</BudgetLabel>
               <BudgetValue>{formatCurrency(item.totalSpent || 0)}</BudgetValue>
             </BudgetItem>
             <BudgetItem>
-              <BudgetLabel>Remaining</BudgetLabel>
+              <BudgetLabel>{t('projects.remaining')}</BudgetLabel>
               <BudgetValue style={{ color: remaining < 0 ? colors.error : colors.success }}>
                 {formatCurrency(remaining)}
               </BudgetValue>
@@ -294,7 +296,7 @@ export const ProjectListScreen: React.FC = () => {
 
           <ProgressContainer>
             <ProgressLabel>
-              <ProgressText>Progress</ProgressText>
+              <ProgressText>{t('projects.progress')}</ProgressText>
               <ProgressText>{progress.toFixed(1)}%</ProgressText>
             </ProgressLabel>
             <ProgressBar>
@@ -310,7 +312,7 @@ export const ProjectListScreen: React.FC = () => {
     <EmptyContainer>
       <Ionicons name="folder-open-outline" size={64} color={colors.gray[400]} />
       <EmptyText>
-        {searchQuery ? `No projects found for "${searchQuery}"` : 'No projects yet.\nCreate your first project!'}
+        {searchQuery ? `${t('projects.noProjects')} "${searchQuery}"` : t('projects.noProjectsMessage')}
       </EmptyText>
     </EmptyContainer>
   );
@@ -319,7 +321,7 @@ export const ProjectListScreen: React.FC = () => {
     <Screen includeTabBarPadding={true}>
       <Header>
         <WelcomeSection>
-          <WelcomeText>Welcome back,</WelcomeText>
+          <WelcomeText>{t('projects.welcome')},</WelcomeText>
           <Title>{currentUser?.name || 'User'}</Title>
         </WelcomeSection>
 
@@ -327,7 +329,7 @@ export const ProjectListScreen: React.FC = () => {
           <SearchContainer>
             <Ionicons name="search" size={20} color={colors.gray[500]} />
             <SearchInput
-              placeholder="Search projects..."
+              placeholder={t('projects.searchPlaceholder')}
               placeholderTextColor={colors.gray[500]}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -347,7 +349,7 @@ export const ProjectListScreen: React.FC = () => {
         <ActionButtons>
           <ActionButton variant="primary" onPress={() => navigation.navigate('CreateProject')} style={{ marginHorizontal: 0 }}>
             <Ionicons name="add" size={16} color={colors.white} />
-            <ActionButtonText variant="primary">New Project</ActionButtonText>
+            <ActionButtonText variant="primary">{t('projects.createProject')}</ActionButtonText>
           </ActionButton>
         </ActionButtons>
       </Header>

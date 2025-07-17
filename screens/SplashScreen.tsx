@@ -143,7 +143,6 @@ export const SplashScreen: React.FC<Props> = ({ onFinish }) => {
             <LogoText>BT</LogoText>
           </LogoCircle>
           <AppName>BuildTrack</AppName>
-          <Tagline>Construction Budget Management</Tagline>
         </LogoContainer>
 
         <BottomContainer>

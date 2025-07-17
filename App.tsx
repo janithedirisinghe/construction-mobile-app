@@ -4,8 +4,10 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppNavigator } from './navigation/AppNavigator';
 import { SplashScreen } from './screens/SplashScreen';
 import { UserRegistrationScreen } from './screens/auth/UserRegistrationScreen';
+import { LanguageProvider } from './contexts/LanguageContext';
 import { initializeDatabase } from './database';
 import { OfflineStorageService, UserService } from './services';
+import './i18n'; // Initialize i18n
 // import { ImageSyncService } from './services'; // Online sync disabled
 
 export default function App() {
@@ -60,16 +62,20 @@ export default function App() {
   if (needsUserRegistration) {
     return (
       <SafeAreaProvider>
-        <UserRegistrationScreen onUserRegistered={handleUserRegistered} />
-        <StatusBar style="auto" />
+        <LanguageProvider>
+          <UserRegistrationScreen onUserRegistered={handleUserRegistered} />
+          <StatusBar style="auto" />
+        </LanguageProvider>
       </SafeAreaProvider>
     );
   }
 
   return (
     <SafeAreaProvider>
-      <AppNavigator />
-      <StatusBar style="auto" />
+      <LanguageProvider>
+        <AppNavigator />
+        <StatusBar style="auto" />
+      </LanguageProvider>
     </SafeAreaProvider>
   );
 }

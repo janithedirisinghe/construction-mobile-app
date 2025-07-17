@@ -84,6 +84,30 @@ A React Native Expo app for tracking construction project expenses and budgets.
    - Receipt image preview
    - Edit/delete actions
 
+## 📎 File Attachments
+
+The app now supports multiple file attachments for expense entries:
+
+### Supported File Types
+- **Images**: JPG, PNG, WEBP (from camera or photo library)
+- **PDFs**: PDF documents (from device storage)
+- **Multiple Selection**: Upload up to 10 files per expense
+
+### Features
+- **Camera Integration**: Take photos directly from the app
+- **Photo Library**: Select single or multiple images
+- **Document Picker**: Browse and select PDF files
+- **File Preview**: Thumbnail previews for images, icons for PDFs
+- **Offline Storage**: All files stored locally for offline operation
+- **File Management**: Individual file removal, file size display
+
+### Technical Implementation
+- Uses `expo-image-picker` for camera and photo library access
+- Uses `expo-document-picker` for PDF and document selection
+- Files stored in app's document directory using `expo-file-system`
+- Metadata tracked in JSON index for offline synchronization
+- Backward compatibility maintained with existing single-image workflow
+
 ## 🎨 Design System
 
 ### Colors

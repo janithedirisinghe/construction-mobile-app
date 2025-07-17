@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { Alert } from 'react-native';
-import { OfflineStorageService, OfflineImage } from '../services/OfflineStorageService';
+import { OfflineStorageService, OfflineFile } from '../services/OfflineStorageService';
+
+// Legacy type alias for backward compatibility
+export type OfflineImage = OfflineFile;
 
 export const useImagePicker = () => {
   const [loading, setLoading] = useState(false);
@@ -20,7 +23,7 @@ export const useImagePicker = () => {
     return true;
   };
 
-  const pickFromCamera = async (): Promise<OfflineImage | null> => {
+  const pickFromCamera = async (): Promise<OfflineFile | null> => {
     if (!(await requestPermissions())) return null;
     
     setLoading(true);
@@ -33,7 +36,7 @@ export const useImagePicker = () => {
       });
 
       if (!result.canceled && result.assets[0]) {
-        const savedImage = await OfflineStorageService.saveImageOffline(result.assets[0].uri);
+        const savedImage = await OfflineStorageService.saveFileOffline(result.assets[0].uri, 'image');
         return savedImage;
       }
       return null;
@@ -46,7 +49,7 @@ export const useImagePicker = () => {
     }
   };
 
-  const pickFromLibrary = async (): Promise<OfflineImage | null> => {
+  const pickFromLibrary = async (): Promise<OfflineFile | null> => {
     if (!(await requestPermissions())) return null;
     
     setLoading(true);
@@ -59,7 +62,7 @@ export const useImagePicker = () => {
       });
 
       if (!result.canceled && result.assets[0]) {
-        const savedImage = await OfflineStorageService.saveImageOffline(result.assets[0].uri);
+        const savedImage = await OfflineStorageService.saveFileOffline(result.assets[0].uri, 'image');
         return savedImage;
       }
       return null;
@@ -72,7 +75,7 @@ export const useImagePicker = () => {
     }
   };
 
-  const showImagePicker = (): Promise<OfflineImage | null> => {
+  const showImagePicker = (): Promise<OfflineFile | null> => {
     return new Promise((resolve) => {
       Alert.alert(
         'Attach Receipt',

@@ -1,10 +1,12 @@
 // screens/expenses/EditExpenseScreen.tsx
 import React, { useState, useEffect } from 'react';
-import { ScrollView, Alert, View, TouchableOpacity, Platform, ActivityIndicator, Image, Modal } from 'react-native';
+import { ScrollView, Alert, View, TouchableOpacity, Platform, ActivityIndicator, Image, Modal, Text } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
 import { Screen } from '../../components/common/Screen';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
@@ -16,8 +18,8 @@ import {
 import { CreateExpenseData, ExpenseCategory, EXPENSE_CATEGORIES, Expense } from '../../types/expense';
 import { colors, spacing, typography, borderRadius, shadows } from '../../theme';
 import { ExpenseService } from '../../services/ExpenseService';
-import { useImagePicker } from '../../hooks/useImagePicker';
-import { OfflineImage } from '../../services/OfflineStorageService';
+import { useFilePicker } from '../../hooks/useFilePicker';
+import { OfflineFile, OfflineStorageService } from '../../services/OfflineStorageService';
 
 const Header = styled.View`
   background-color: ${colors.white};
@@ -294,6 +296,73 @@ const ReceiptImageFull = styled.Image`
   height: 100%;
 `;
 
+const FilesContainer = styled.View`
+  margin-top: ${spacing.sm}px;
+`;
+
+const FilesList = styled.ScrollView`
+  max-height: 200px;
+`;
+
+const FileItem = styled.View`
+  flex-direction: row;
+  align-items: center;
+  background-color: ${colors.gray[100]};
+  border: 1px solid ${colors.gray[200]};
+  border-radius: ${borderRadius.lg}px;
+  padding: ${spacing.sm}px;
+  margin-bottom: ${spacing.xs}px;
+`;
+
+const FilePreview = styled.TouchableOpacity`
+  width: 40px;
+  height: 40px;
+  border-radius: ${borderRadius.md}px;
+  background-color: ${colors.gray[200]};
+  justify-content: center;
+  align-items: center;
+  margin-right: ${spacing.sm}px;
+`;
+
+const FileImage = styled.Image`
+  width: 40px;
+  height: 40px;
+  border-radius: ${borderRadius.md}px;
+`;
+
+const FileInfo = styled.View`
+  flex: 1;
+  margin-right: ${spacing.sm}px;
+`;
+
+const FileName = styled.Text`
+  font-size: ${typography.sizes.sm}px;
+  font-weight: ${typography.weights.medium};
+  color: ${colors.gray[900]};
+`;
+
+const FileType = styled.Text`
+  font-size: ${typography.sizes.xs}px;
+  color: ${colors.gray[600]};
+  margin-top: 2px;
+`;
+
+const RemoveFileButton = styled.TouchableOpacity`
+  background-color: ${colors.error};
+  border-radius: ${borderRadius.round}px;
+  width: 20px;
+  height: 20px;
+  justify-content: center;
+  align-items: center;
+`;
+
+const FilesCountText = styled.Text`
+  font-size: ${typography.sizes.sm}px;
+  color: ${colors.gray[600]};
+  margin-top: ${spacing.xs}px;
+  text-align: center;
+`;
+
 interface FormData extends CreateExpenseData {
   id?: number;
 }
@@ -311,7 +380,7 @@ export const EditExpenseScreen: React.FC = () => {
   const navigation = useNavigation<EditExpenseScreenNavigationProp>();
   const route = useRoute<EditExpenseScreenRouteProp>();
   const { expenseId, projectId } = route.params;
-  const { showImagePicker, loading: imageLoading } = useImagePicker();
+  const { showFilePicker, loading: fileLoading } = useFilePicker();
 
   const [expense, setExpense] = useState<Expense | null>(null);
   const [formData, setFormData] = useState<FormData>({
@@ -327,8 +396,9 @@ export const EditExpenseScreen: React.FC = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempDate, setTempDate] = useState(new Date());
-  const [attachedReceipt, setAttachedReceipt] = useState<OfflineImage | null>(null);
+  const [attachedFiles, setAttachedFiles] = useState<OfflineFile[]>([]);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [selectedFileIndex, setSelectedFileIndex] = useState(0);
 
   useEffect(() => {
     loadExpense();
@@ -356,19 +426,30 @@ export const EditExpenseScreen: React.FC = () => {
         projectId: expenseData.projectId,
       });
       
-      // If there's an existing receipt, set it for preview
-      if (expenseData.receiptUrl) {
-        setAttachedReceipt({
-          id: expenseData.id.toString(),
-          localUri: expenseData.receiptUrl,
-          originalUri: expenseData.receiptUrl,
-          filename: `receipt_${expenseData.id}.jpg`,
-          mimeType: 'image/jpeg',
-          size: 0, // We don't have size info for existing receipts
-          expenseId: expenseData.id.toString(),
-          synced: true,
-          createdAt: expenseData.createdAt
-        });
+      // Load attached files for this expense
+      if (expenseData.id) {
+        try {
+          const files = await OfflineStorageService.getFilesByExpenseId(expenseData.id.toString());
+          setAttachedFiles(files);
+        } catch (error) {
+          console.error('Error loading expense files:', error);
+          // If there's a receiptUrl but no files found, create a legacy file entry
+          if (expenseData.receiptUrl) {
+            const legacyFile: OfflineFile = {
+              id: expenseData.id.toString(),
+              localUri: expenseData.receiptUrl,
+              originalUri: expenseData.receiptUrl,
+              filename: `receipt_${expenseData.id}.jpg`,
+              mimeType: 'image/jpeg',
+              size: 0,
+              fileType: 'image',
+              expenseId: expenseData.id.toString(),
+              synced: true,
+              createdAt: expenseData.createdAt
+            };
+            setAttachedFiles([legacyFile]);
+          }
+        }
       }
     } catch (error) {
       console.error('Error loading expense:', error);
@@ -425,8 +506,9 @@ export const EditExpenseScreen: React.FC = () => {
         category: formData.category,
         expenseDate: formData.expenseDate,
         notes: formData.notes?.trim(),
-        receiptUrl: attachedReceipt?.localUri,
-        offlineReceiptId: attachedReceipt?.id,
+        receiptUrl: attachedFiles.length > 0 ? attachedFiles[0].localUri : undefined,
+        offlineReceiptId: attachedFiles.length > 0 ? attachedFiles[0].id : undefined,
+        attachedFileIds: attachedFiles.map(file => file.id),
       };
 
       await ExpenseService.updateExpense(expenseId, updateData);
@@ -529,22 +611,112 @@ export const EditExpenseScreen: React.FC = () => {
     return amount.toLocaleString();
   };
 
-  const handleAttachReceipt = async () => {
-    const selectedImage = await showImagePicker();
-    if (selectedImage) {
-      setAttachedReceipt(selectedImage);
-      updateField('receiptUrl', selectedImage.localUri);
+  const handleAttachFiles = async () => {
+    const selectedFiles = await showFilePicker(true);
+    if (selectedFiles.length > 0) {
+      // Associate files with expense if expense exists
+      if (expense?.id) {
+        for (const file of selectedFiles) {
+          await OfflineStorageService.associateFileWithExpense(file.id, expense.id.toString());
+        }
+      }
+      setAttachedFiles(prevFiles => [...prevFiles, ...selectedFiles]);
     }
   };
 
-  const handleRemoveReceipt = () => {
-    setAttachedReceipt(null);
-    updateField('receiptUrl', undefined);
+  const handleRemoveFile = async (fileId: string) => {
+    setAttachedFiles(prevFiles => prevFiles.filter(file => file.id !== fileId));
+    // Delete the file from storage
+    await OfflineStorageService.deleteFile(fileId);
   };
 
-  const handleViewReceiptModal = () => {
-    if (attachedReceipt) {
-      setShowReceiptModal(true);
+  const handleViewFile = (index: number) => {
+    if (attachedFiles[index]) {
+      const file = attachedFiles[index];
+      
+      // For PDF files, directly open with external app picker
+      if (file.fileType === 'pdf') {
+        openFileWithExternalApp(file);
+      } else {
+        // For images, show in modal
+        setSelectedFileIndex(index);
+        setShowReceiptModal(true);
+      }
+    }
+  };
+
+  const openFileWithExternalApp = async (file: OfflineFile) => {
+    try {
+      // Ensure file has proper extension for better app recognition
+      let fileUri = file.localUri;
+      const fileExtension = file.filename?.split('.').pop()?.toLowerCase();
+      
+      // For PDF files, ensure the URI has .pdf extension for better app recognition
+      if (file.fileType === 'pdf' && fileExtension !== 'pdf') {
+        const tempFileName = `${file.filename || 'document'}.pdf`;
+        const tempUri = `${FileSystem.cacheDirectory}${tempFileName}`;
+        
+        try {
+          await FileSystem.copyAsync({
+            from: file.localUri,
+            to: tempUri,
+          });
+          fileUri = tempUri;
+        } catch (copyError) {
+          console.warn('Could not copy file with proper extension, using original:', copyError);
+          fileUri = file.localUri;
+        }
+      }
+
+      if (Platform.OS === 'android') {
+        // For Android, use Sharing to show apps that can handle the file
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(fileUri, {
+            mimeType: file.mimeType || 'application/pdf',
+            dialogTitle: 'Open with...',
+          });
+        } else {
+          Alert.alert('Error', 'Unable to open file. File sharing is not available on this device.');
+        }
+      } else {
+        // For iOS, use Sharing which will try to open with default app
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(fileUri, {
+            mimeType: file.mimeType || 'application/pdf',
+            UTI: 'com.adobe.pdf',
+          });
+        } else {
+          Alert.alert('Error', 'Unable to open file. File sharing is not available on this device.');
+        }
+      }
+    } catch (error) {
+      console.error('Error opening file:', error);
+      Alert.alert(
+        'Error', 
+        'Unable to open the file. Please make sure you have a PDF viewer app installed.'
+      );
+    }
+  };
+
+  const getFileIcon = (fileType: string) => {
+    switch (fileType) {
+      case 'image':
+        return 'image' as const;
+      case 'pdf':
+        return 'document-text' as const;
+      default:
+        return 'document' as const;
+    }
+  };
+
+  const getFileTypeLabel = (fileType: string): string => {
+    switch (fileType) {
+      case 'image':
+        return 'Image';
+      case 'pdf':
+        return 'PDF Document';
+      default:
+        return 'Document';
     }
   };
 
@@ -645,32 +817,54 @@ export const EditExpenseScreen: React.FC = () => {
           </FormSection>
 
           <FormSection>
-            <SectionTitle>Receipt</SectionTitle>
-            <ReceiptButton onPress={handleAttachReceipt} disabled={imageLoading}>
-              {imageLoading ? (
+            <SectionTitle>Attachments</SectionTitle>
+            <ReceiptButton onPress={handleAttachFiles} disabled={fileLoading}>
+              {fileLoading ? (
                 <ActivityIndicator size="small" color={colors.gray[700]} />
               ) : (
-                <Ionicons name="camera" size={20} color={colors.gray[700]} />
+                <Ionicons name="attach" size={20} color={colors.gray[700]} />
               )}
               <ReceiptText>
-                {attachedReceipt ? 'Change Receipt' : 'Attach Receipt'}
+                Attach Files (Images, PDFs)
               </ReceiptText>
             </ReceiptButton>
             
-            {attachedReceipt && (
-              <ReceiptPreview>
-                <TouchableOpacity onPress={handleViewReceiptModal}>
-                  <ReceiptImage 
-                    source={{ uri: attachedReceipt.localUri }} 
-                    resizeMode="cover" 
-                  />
-                </TouchableOpacity>
-                <RemoveReceiptButton onPress={handleRemoveReceipt}>
-                  <Ionicons name="close" size={12} color={colors.white} />
-                </RemoveReceiptButton>
-              </ReceiptPreview>
+            {attachedFiles.length > 0 && (
+              <FilesContainer>
+                <FilesCountText>
+                  {attachedFiles.length} file(s) attached
+                </FilesCountText>
+                <FilesList showsVerticalScrollIndicator={false}>
+                  {attachedFiles.map((file, index) => (
+                    <FileItem key={file.id}>
+                      <FilePreview onPress={() => handleViewFile(index)}>
+                        {file.fileType === 'image' ? (
+                          <FileImage source={{ uri: file.localUri }} resizeMode="cover" />
+                        ) : (
+                          <Ionicons 
+                            name={getFileIcon(file.fileType)} 
+                            size={20} 
+                            color={colors.primary} 
+                          />
+                        )}
+                      </FilePreview>
+                      <FileInfo>
+                        <FileName numberOfLines={1}>
+                          {file.filename}
+                        </FileName>
+                        <FileType>
+                          {getFileTypeLabel(file.fileType)} • {(file.size / 1024).toFixed(1)} KB
+                          {file.fileType === 'pdf' && ' • Tap to open'}
+                        </FileType>
+                      </FileInfo>
+                      <RemoveFileButton onPress={() => handleRemoveFile(file.id)}>
+                        <Ionicons name="close" size={12} color={colors.white} />
+                      </RemoveFileButton>
+                    </FileItem>
+                  ))}
+                </FilesList>
+              </FilesContainer>
             )}
-            {errors.receiptUrl && <ErrorText>{errors.receiptUrl}</ErrorText>}
           </FormSection>
         </FormContainer>
 
@@ -702,8 +896,8 @@ export const EditExpenseScreen: React.FC = () => {
           </ActionButton>
         </ButtonContainer>
 
-        {/* Receipt Image Modal */}
-        {showReceiptModal && attachedReceipt && (
+        {/* File View Modal - Only for images */}
+        {showReceiptModal && attachedFiles.length > 0 && (
           <Modal
             visible={showReceiptModal}
             transparent={true}
@@ -712,14 +906,25 @@ export const EditExpenseScreen: React.FC = () => {
           >
             <ModalContainer>
               <ModalHeader>
-                <ModalTitle>Receipt</ModalTitle>
+                <ModalTitle>
+                  {attachedFiles[selectedFileIndex] ? (
+                    `Image (${selectedFileIndex + 1}/${attachedFiles.filter(f => f.fileType === 'image').length})`
+                  ) : (
+                    'Image'
+                  )}
+                </ModalTitle>
                 <ModalCloseButton onPress={() => setShowReceiptModal(false)}>
                   <Ionicons name="close" size={24} color={colors.white} />
                 </ModalCloseButton>
               </ModalHeader>
 
               <ImageContainer>
-                <ReceiptImageFull source={{ uri: attachedReceipt.localUri }} resizeMode="contain" />
+                {attachedFiles[selectedFileIndex]?.fileType === 'image' && (
+                  <ReceiptImageFull 
+                    source={{ uri: attachedFiles[selectedFileIndex].localUri }} 
+                    resizeMode="contain" 
+                  />
+                )}
               </ImageContainer>
             </ModalContainer>
           </Modal>

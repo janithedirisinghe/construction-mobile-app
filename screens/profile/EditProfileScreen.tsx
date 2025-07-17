@@ -3,6 +3,7 @@ import { ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native'
 import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { Screen } from '../../components/common/Screen';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
@@ -85,6 +86,7 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
   onProfileUpdated 
 }) => {
   const navigation = useNavigation();
+  const { t } = useTranslation();
   const [user, setUser] = useState<User | null>(null);
   const [formData, setFormData] = useState<UpdateUserData>({
     name: '',
@@ -115,7 +117,7 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
       }
     } catch (error) {
       console.error('Error loading user data:', error);
-      Alert.alert('Error', 'Failed to load profile data');
+      Alert.alert(t('editProfile.errorTitle'), t('editProfile.loadError'));
     } finally {
       setLoading(false);
     }
@@ -125,23 +127,23 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
     const newErrors: Partial<UpdateUserData> = {};
 
     if (!formData.name?.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = t('editProfile.validation.nameRequired');
     }
 
     if (!formData.email?.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = t('editProfile.validation.emailRequired');
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = t('editProfile.validation.emailInvalid');
     }
 
     if (!formData.mobile?.trim()) {
-      newErrors.mobile = 'Mobile number is required';
+      newErrors.mobile = t('editProfile.validation.mobileRequired');
     } else if (!/^\+?[\d\s-()]+$/.test(formData.mobile)) {
-      newErrors.mobile = 'Please enter a valid mobile number';
+      newErrors.mobile = t('editProfile.validation.mobileInvalid');
     }
 
     if (!formData.address?.trim()) {
-      newErrors.address = 'Address is required';
+      newErrors.address = t('editProfile.validation.addressRequired');
     }
 
     setErrors(newErrors);
@@ -165,8 +167,8 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
       setSaving(true);
       await UserService.updateUser(user.id, formData);
       Alert.alert(
-        'Success',
-        'Your profile has been updated successfully.',
+        t('editProfile.successTitle'),
+        t('editProfile.successMessage'),
         [
           { 
             text: 'OK', 
@@ -179,7 +181,7 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
       );
     } catch (error) {
       console.error('Error updating user:', error);
-      Alert.alert('Error', 'Failed to update your profile. Please try again.');
+      Alert.alert(t('editProfile.errorTitle'), t('editProfile.errorMessage'));
     } finally {
       setSaving(false);
     }
@@ -193,7 +195,7 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
     return (
       <Screen>
         <LoadingContainer>
-          <LoadingText>Loading profile...</LoadingText>
+          <LoadingText>{t('editProfile.loading')}</LoadingText>
         </LoadingContainer>
       </Screen>
     );
@@ -203,9 +205,9 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
     return (
       <Screen>
         <LoadingContainer>
-          <LoadingText>Profile not found</LoadingText>
+          <LoadingText>{t('editProfile.notFound')}</LoadingText>
           <Button
-            title="Go Back"
+            title={t('editProfile.goBack')}
             onPress={() => navigation.goBack()}
             variant="primary"
           />
@@ -227,8 +229,8 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
               <Ionicons name="arrow-back" size={24} color={colors.gray[900]} />
             </BackButton>
             <HeaderText>
-              <Title>Edit Profile</Title>
-              <Subtitle>Update your information</Subtitle>
+              <Title>{t('editProfile.title')}</Title>
+              <Subtitle>{t('editProfile.subtitle')}</Subtitle>
             </HeaderText>
             <Spacer />
           </HeaderContent>
@@ -238,8 +240,8 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
           <Card padding="large">
             <FormSection>
               <Input
-                label="Full Name"
-                placeholder="Enter your full name"
+                label={t('editProfile.fullName')}
+                placeholder={t('editProfile.fullNamePlaceholder')}
                 value={formData.name || ''}
                 onChangeText={(value) => handleInputChange('name', value)}
                 error={errors.name}
@@ -248,8 +250,8 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
               />
 
               <Input
-                label="Email Address"
-                placeholder="Enter your email address"
+                label={t('editProfile.emailAddress')}
+                placeholder={t('editProfile.emailAddressPlaceholder')}
                 value={formData.email || ''}
                 onChangeText={(value) => handleInputChange('email', value)}
                 error={errors.email}
@@ -259,8 +261,8 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
               />
 
               <Input
-                label="Mobile Number"
-                placeholder="Enter your mobile number"
+                label={t('editProfile.mobileNumber')}
+                placeholder={t('editProfile.mobileNumberPlaceholder')}
                 value={formData.mobile || ''}
                 onChangeText={(value) => handleInputChange('mobile', value)}
                 error={errors.mobile}
@@ -269,8 +271,8 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
               />
 
               <Input
-                label="Address"
-                placeholder="Enter your address"
+                label={t('editProfile.address')}
+                placeholder={t('editProfile.addressPlaceholder')}
                 value={formData.address || ''}
                 onChangeText={(value) => handleInputChange('address', value)}
                 error={errors.address}
@@ -283,12 +285,12 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
 
             <ButtonContainer>
               <Button
-                title="Cancel"
+                title={t('editProfile.cancel')}
                 onPress={handleCancel}
                 variant="secondary"
               />
               <Button
-                title={saving ? "Saving..." : "Save Changes"}
+                title={saving ? t('editProfile.saving') : t('editProfile.saveChanges')}
                 onPress={handleSave}
                 disabled={saving}
                 variant="primary"

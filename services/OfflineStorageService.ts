@@ -9,52 +9,96 @@ const generateUUID = (): string => {
   });
 };
 
-export interface OfflineImage {
+export interface OfflineFile {
   id: string;
   localUri: string;
   originalUri: string;
   filename: string;
   mimeType: string;
   size: number;
+  fileType: 'image' | 'pdf' | 'document';
   expenseId?: string;
   synced: boolean;
   createdAt: string;
 }
 
+// Legacy interface for backward compatibility
+export interface OfflineImage extends OfflineFile {}
+
 export class OfflineStorageService {
+  private static FILES_DIR = `${FileSystem.documentDirectory}expense_files/`;
+  private static FILES_INDEX_FILE = `${FileSystem.documentDirectory}files_index.json`;
+  // Legacy paths for backward compatibility
   private static IMAGES_DIR = `${FileSystem.documentDirectory}expense_images/`;
   private static IMAGES_INDEX_FILE = `${FileSystem.documentDirectory}images_index.json`;
 
   static async initializeStorage(): Promise<void> {
     try {
-      // Create images directory if it doesn't exist
-      const dirInfo = await FileSystem.getInfoAsync(this.IMAGES_DIR);
+      // Create files directory if it doesn't exist
+      const dirInfo = await FileSystem.getInfoAsync(this.FILES_DIR);
       if (!dirInfo.exists) {
-        await FileSystem.makeDirectoryAsync(this.IMAGES_DIR, { intermediates: true });
+        await FileSystem.makeDirectoryAsync(this.FILES_DIR, { intermediates: true });
       }
 
       // Create index file if it doesn't exist
-      const indexInfo = await FileSystem.getInfoAsync(this.IMAGES_INDEX_FILE);
+      const indexInfo = await FileSystem.getInfoAsync(this.FILES_INDEX_FILE);
       if (!indexInfo.exists) {
-        await FileSystem.writeAsStringAsync(this.IMAGES_INDEX_FILE, JSON.stringify([]));
+        await FileSystem.writeAsStringAsync(this.FILES_INDEX_FILE, JSON.stringify([]));
       }
+
+      // Migrate old images to new files structure
+      await this.migrateOldImages();
     } catch (error) {
       console.error('Error initializing offline storage:', error);
     }
   }
 
-  static async saveImageOffline(imageUri: string, expenseId?: string): Promise<OfflineImage | null> {
+  private static async migrateOldImages(): Promise<void> {
+    try {
+      const oldIndexInfo = await FileSystem.getInfoAsync(this.IMAGES_INDEX_FILE);
+      if (oldIndexInfo.exists) {
+        const oldIndexContent = await FileSystem.readAsStringAsync(this.IMAGES_INDEX_FILE);
+        const oldImages = JSON.parse(oldIndexContent) || [];
+        
+        const newFiles: OfflineFile[] = [];
+        for (const oldImage of oldImages) {
+          const newFile: OfflineFile = {
+            ...oldImage,
+            fileType: 'image'
+          };
+          newFiles.push(newFile);
+        }
+        
+        if (newFiles.length > 0) {
+          const currentFiles = await this.getFilesIndex();
+          const combinedFiles = [...currentFiles, ...newFiles];
+          await FileSystem.writeAsStringAsync(this.FILES_INDEX_FILE, JSON.stringify(combinedFiles));
+        }
+        
+        // Remove old index file after migration
+        await FileSystem.deleteAsync(this.IMAGES_INDEX_FILE, { idempotent: true });
+      }
+    } catch (error) {
+      console.error('Error migrating old images:', error);
+    }
+  }
+
+  static async saveImageOffline(imageUri: string, expenseId?: string): Promise<OfflineFile | null> {
+    return this.saveFileOffline(imageUri, 'image', expenseId);
+  }
+
+  static async saveFileOffline(fileUri: string, fileType: 'image' | 'pdf' | 'document', expenseId?: string): Promise<OfflineFile | null> {
     try {
       await this.initializeStorage();
 
-      const imageId = generateUUID();
-      const fileExtension = imageUri.split('.').pop() || 'jpg';
-      const filename = `${imageId}.${fileExtension}`;
-      const localUri = `${this.IMAGES_DIR}${filename}`;
+      const fileId = generateUUID();
+      const fileExtension = fileUri.split('.').pop() || (fileType === 'image' ? 'jpg' : 'pdf');
+      const filename = `${fileId}.${fileExtension}`;
+      const localUri = `${this.FILES_DIR}${filename}`;
 
-      // Copy image to local storage
+      // Copy file to local storage
       await FileSystem.copyAsync({
-        from: imageUri,
+        from: fileUri,
         to: localUri
       });
 
@@ -62,104 +106,148 @@ export class OfflineStorageService {
       const fileInfo = await FileSystem.getInfoAsync(localUri);
       const fileSize = fileInfo.exists && !fileInfo.isDirectory ? fileInfo.size : 0;
       
-      const offlineImage: OfflineImage = {
-        id: imageId,
+      // Determine MIME type
+      let mimeType: string;
+      if (fileType === 'image') {
+        mimeType = `image/${fileExtension}`;
+      } else if (fileType === 'pdf') {
+        mimeType = 'application/pdf';
+      } else {
+        mimeType = 'application/octet-stream';
+      }
+      
+      const offlineFile: OfflineFile = {
+        id: fileId,
         localUri,
-        originalUri: imageUri,
+        originalUri: fileUri,
         filename,
-        mimeType: `image/${fileExtension}`,
+        mimeType,
         size: fileSize,
+        fileType,
         expenseId,
         synced: false,
         createdAt: new Date().toISOString()
       };
 
       // Update index
-      await this.addToIndex(offlineImage);
+      await this.addToIndex(offlineFile);
 
-      return offlineImage;
+      return offlineFile;
     } catch (error) {
-      console.error('Error saving image offline:', error);
+      console.error('Error saving file offline:', error);
       return null;
     }
   }
 
-  static async getImagesIndex(): Promise<OfflineImage[]> {
+  static async getFilesIndex(): Promise<OfflineFile[]> {
     try {
-      const indexContent = await FileSystem.readAsStringAsync(this.IMAGES_INDEX_FILE);
+      const indexContent = await FileSystem.readAsStringAsync(this.FILES_INDEX_FILE);
       return JSON.parse(indexContent) || [];
     } catch (error) {
-      console.error('Error reading images index:', error);
+      console.error('Error reading files index:', error);
       return [];
     }
   }
 
-  private static async addToIndex(image: OfflineImage): Promise<void> {
+  // Legacy method for backward compatibility
+  static async getImagesIndex(): Promise<OfflineImage[]> {
+    const files = await this.getFilesIndex();
+    return files.filter(file => file.fileType === 'image');
+  }
+
+  private static async addToIndex(file: OfflineFile): Promise<void> {
     try {
-      const currentIndex = await this.getImagesIndex();
-      currentIndex.push(image);
-      await FileSystem.writeAsStringAsync(this.IMAGES_INDEX_FILE, JSON.stringify(currentIndex));
+      const currentIndex = await this.getFilesIndex();
+      currentIndex.push(file);
+      await FileSystem.writeAsStringAsync(this.FILES_INDEX_FILE, JSON.stringify(currentIndex));
     } catch (error) {
-      console.error('Error updating images index:', error);
+      console.error('Error updating files index:', error);
     }
   }
 
-  static async updateImageSyncStatus(imageId: string, synced: boolean, remoteUrl?: string): Promise<void> {
+  static async updateFileSyncStatus(fileId: string, synced: boolean, remoteUrl?: string): Promise<void> {
     try {
-      const currentIndex = await this.getImagesIndex();
-      const imageIndex = currentIndex.findIndex(img => img.id === imageId);
+      const currentIndex = await this.getFilesIndex();
+      const fileIndex = currentIndex.findIndex(file => file.id === fileId);
       
-      if (imageIndex !== -1) {
-        currentIndex[imageIndex].synced = synced;
+      if (fileIndex !== -1) {
+        currentIndex[fileIndex].synced = synced;
         if (remoteUrl) {
-          currentIndex[imageIndex].originalUri = remoteUrl;
+          currentIndex[fileIndex].originalUri = remoteUrl;
         }
-        await FileSystem.writeAsStringAsync(this.IMAGES_INDEX_FILE, JSON.stringify(currentIndex));
+        await FileSystem.writeAsStringAsync(this.FILES_INDEX_FILE, JSON.stringify(currentIndex));
       }
     } catch (error) {
-      console.error('Error updating image sync status:', error);
+      console.error('Error updating file sync status:', error);
     }
   }
 
-  static async getUnsyncedImages(): Promise<OfflineImage[]> {
-    const allImages = await this.getImagesIndex();
-    return allImages.filter(img => !img.synced);
+  // Legacy method for backward compatibility
+  static async updateImageSyncStatus(imageId: string, synced: boolean, remoteUrl?: string): Promise<void> {
+    return this.updateFileSyncStatus(imageId, synced, remoteUrl);
   }
 
-  static async deleteImage(imageId: string): Promise<void> {
+  static async getUnsyncedFiles(): Promise<OfflineFile[]> {
+    const allFiles = await this.getFilesIndex();
+    return allFiles.filter(file => !file.synced);
+  }
+
+  // Legacy method for backward compatibility
+  static async getUnsyncedImages(): Promise<OfflineImage[]> {
+    const unsyncedFiles = await this.getUnsyncedFiles();
+    return unsyncedFiles.filter(file => file.fileType === 'image');
+  }
+
+  static async deleteFile(fileId: string): Promise<void> {
     try {
-      const currentIndex = await this.getImagesIndex();
-      const image = currentIndex.find(img => img.id === imageId);
+      const currentIndex = await this.getFilesIndex();
+      const file = currentIndex.find(f => f.id === fileId);
       
-      if (image) {
+      if (file) {
         // Delete physical file
-        await FileSystem.deleteAsync(image.localUri, { idempotent: true });
+        await FileSystem.deleteAsync(file.localUri, { idempotent: true });
         
         // Remove from index
-        const updatedIndex = currentIndex.filter(img => img.id !== imageId);
-        await FileSystem.writeAsStringAsync(this.IMAGES_INDEX_FILE, JSON.stringify(updatedIndex));
+        const updatedIndex = currentIndex.filter(f => f.id !== fileId);
+        await FileSystem.writeAsStringAsync(this.FILES_INDEX_FILE, JSON.stringify(updatedIndex));
       }
     } catch (error) {
-      console.error('Error deleting image:', error);
+      console.error('Error deleting file:', error);
     }
   }
 
+  // Legacy method for backward compatibility
+  static async deleteImage(imageId: string): Promise<void> {
+    return this.deleteFile(imageId);
+  }
+
+  static async getFilesByExpenseId(expenseId: string): Promise<OfflineFile[]> {
+    const allFiles = await this.getFilesIndex();
+    return allFiles.filter(file => file.expenseId === expenseId);
+  }
+
+  // Legacy method for backward compatibility
   static async getImagesByExpenseId(expenseId: string): Promise<OfflineImage[]> {
-    const allImages = await this.getImagesIndex();
-    return allImages.filter(img => img.expenseId === expenseId);
+    const files = await this.getFilesByExpenseId(expenseId);
+    return files.filter(file => file.fileType === 'image');
   }
 
-  static async associateImageWithExpense(imageId: string, expenseId: string): Promise<void> {
+  static async associateFileWithExpense(fileId: string, expenseId: string): Promise<void> {
     try {
-      const currentIndex = await this.getImagesIndex();
-      const imageIndex = currentIndex.findIndex(img => img.id === imageId);
+      const currentIndex = await this.getFilesIndex();
+      const fileIndex = currentIndex.findIndex(file => file.id === fileId);
       
-      if (imageIndex !== -1) {
-        currentIndex[imageIndex].expenseId = expenseId;
-        await FileSystem.writeAsStringAsync(this.IMAGES_INDEX_FILE, JSON.stringify(currentIndex));
+      if (fileIndex !== -1) {
+        currentIndex[fileIndex].expenseId = expenseId;
+        await FileSystem.writeAsStringAsync(this.FILES_INDEX_FILE, JSON.stringify(currentIndex));
       }
     } catch (error) {
-      console.error('Error associating image with expense:', error);
+      console.error('Error associating file with expense:', error);
     }
+  }
+
+  // Legacy method for backward compatibility
+  static async associateImageWithExpense(imageId: string, expenseId: string): Promise<void> {
+    return this.associateFileWithExpense(imageId, expenseId);
   }
 }

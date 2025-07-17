@@ -3,10 +3,12 @@ import { ScrollView, Alert } from 'react-native';
 import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { ProfileScreenNavigationProp } from '../../types/navigation';
 import { Screen } from '../../components/common/Screen';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
+import { LanguageSelector } from '../../components/common/LanguageSelector';
 import { colors, spacing, typography, borderRadius } from '../../theme';
 import { UserService } from '../../services/UserService';
 import { User } from '../../types/auth';
@@ -147,6 +149,7 @@ const LoadingText = styled.Text`
 
 export const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
+  const { t } = useTranslation();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -168,7 +171,7 @@ export const ProfileScreen: React.FC = () => {
       setUser(currentUser);
     } catch (error) {
       console.error('Error loading user data:', error);
-      Alert.alert('Error', 'Failed to load profile data');
+      Alert.alert(t('editProfile.errorTitle'), t('profile.loadError'));
     } finally {
       setLoading(false);
     }
@@ -179,29 +182,29 @@ export const ProfileScreen: React.FC = () => {
   };
 
   const handleSettings = () => {
-    Alert.alert('Settings', 'Settings functionality will be implemented soon.');
+    Alert.alert(t('profile.settings'), t('profile.settingsComingSoon'));
   };
 
   const handleHelp = () => {
-    Alert.alert('Help & Support', 'Help & support functionality will be implemented soon.');
+    Alert.alert(t('profile.helpSupport'), t('profile.helpComingSoon'));
   };
 
   const handleAbout = () => {
-    Alert.alert('About', 'Construction App v1.0.0\nBuilt for construction project management.');
+    Alert.alert(t('profile.about'), t('profile.aboutMessage'));
   };
 
   const handleLogout = () => {
     Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
+      t('profile.logoutConfirmTitle'),
+      t('profile.logoutConfirmMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('profile.cancel'), style: 'cancel' },
         { 
-          text: 'Logout', 
+          text: t('profile.logout'), 
           style: 'destructive',
           onPress: () => {
             // In a real app, you'd clear the authentication state here
-            Alert.alert('Success', 'You have been logged out successfully.');
+            Alert.alert(t('editProfile.successTitle'), t('profile.logoutSuccess'));
           }
         }
       ]
@@ -212,7 +215,7 @@ export const ProfileScreen: React.FC = () => {
     return (
       <Screen includeTabBarPadding={true}>
         <LoadingContainer>
-          <LoadingText>Loading profile...</LoadingText>
+          <LoadingText>{t('profile.loading')}</LoadingText>
         </LoadingContainer>
       </Screen>
     );
@@ -222,9 +225,9 @@ export const ProfileScreen: React.FC = () => {
     return (
       <Screen includeTabBarPadding={true}>
         <LoadingContainer>
-          <LoadingText>Profile not found</LoadingText>
+          <LoadingText>{t('profile.notFound')}</LoadingText>
           <Button
-            title="Refresh"
+            title={t('profile.refresh')}
             onPress={loadUserData}
             variant="primary"
           />
@@ -239,8 +242,8 @@ export const ProfileScreen: React.FC = () => {
     <Screen includeTabBarPadding={true}>
       <Header>
         <HeaderContent>
-          <Title>Profile</Title>
-          <Subtitle>Manage your account settings</Subtitle>
+          <Title>{t('profile.title')}</Title>
+          <Subtitle>{t('profile.subtitle')}</Subtitle>
         </HeaderContent>
       </Header>
 
@@ -255,15 +258,15 @@ export const ProfileScreen: React.FC = () => {
 
         <Card padding="large">
           <MenuSection>
-            <SectionTitle>Account</SectionTitle>
+            <SectionTitle>{t('profile.account')}</SectionTitle>
             
             <MenuItem onPress={handleEditProfile}>
               <MenuIconContainer>
                 <Ionicons name="person-outline" size={20} color={colors.gray[600]} />
               </MenuIconContainer>
               <MenuContent>
-                <MenuTitle>Edit Profile</MenuTitle>
-                <MenuSubtitle>Update your personal information</MenuSubtitle>
+                <MenuTitle>{t('profile.editProfile')}</MenuTitle>
+                <MenuSubtitle>{t('profile.editProfileDescription')}</MenuSubtitle>
               </MenuContent>
               <ChevronIcon>
                 <Ionicons name="chevron-forward" size={20} color={colors.gray[400]} />
@@ -275,25 +278,27 @@ export const ProfileScreen: React.FC = () => {
                 <Ionicons name="settings-outline" size={20} color={colors.gray[600]} />
               </MenuIconContainer>
               <MenuContent>
-                <MenuTitle>Settings</MenuTitle>
-                <MenuSubtitle>App preferences and notifications</MenuSubtitle>
+                <MenuTitle>{t('profile.settings')}</MenuTitle>
+                <MenuSubtitle>{t('profile.settingsDescription')}</MenuSubtitle>
               </MenuContent>
               <ChevronIcon>
                 <Ionicons name="chevron-forward" size={20} color={colors.gray[400]} />
               </ChevronIcon>
             </MenuItem>
+
+            <LanguageSelector />
           </MenuSection>
 
           <MenuSection>
-            <SectionTitle>Support</SectionTitle>
+            <SectionTitle>{t('profile.support')}</SectionTitle>
             
             <MenuItem onPress={handleHelp}>
               <MenuIconContainer>
                 <Ionicons name="help-circle-outline" size={20} color={colors.gray[600]} />
               </MenuIconContainer>
               <MenuContent>
-                <MenuTitle>Help & Support</MenuTitle>
-                <MenuSubtitle>Get help and contact support</MenuSubtitle>
+                <MenuTitle>{t('profile.helpSupport')}</MenuTitle>
+                <MenuSubtitle>{t('profile.helpSupportDescription')}</MenuSubtitle>
               </MenuContent>
               <ChevronIcon>
                 <Ionicons name="chevron-forward" size={20} color={colors.gray[400]} />
@@ -305,8 +310,8 @@ export const ProfileScreen: React.FC = () => {
                 <Ionicons name="information-circle-outline" size={20} color={colors.gray[600]} />
               </MenuIconContainer>
               <MenuContent>
-                <MenuTitle>About</MenuTitle>
-                <MenuSubtitle>App version and information</MenuSubtitle>
+                <MenuTitle>{t('profile.about')}</MenuTitle>
+                <MenuSubtitle>{t('profile.aboutDescription')}</MenuSubtitle>
               </MenuContent>
               <ChevronIcon>
                 <Ionicons name="chevron-forward" size={20} color={colors.gray[400]} />
@@ -317,7 +322,7 @@ export const ProfileScreen: React.FC = () => {
 
         <LogoutButtonContainer>
           <Button
-            title="Logout"
+            title={t('profile.logout')}
             onPress={handleLogout}
             variant="secondary"
           />
