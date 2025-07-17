@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { ScrollView, Alert, Share, Modal, Dimensions, Image, Text, View, TouchableOpacity } from 'react-native';
+import { ScrollView, Alert, Share, Modal, Dimensions, Image, Text, View, TouchableOpacity, Platform } from 'react-native';
 import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
 import { Screen } from '../../components/common/Screen';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
@@ -476,8 +478,69 @@ export const ExpenseDetailScreen: React.FC = () => {
 
   const handleViewFile = (index: number) => {
     if (attachedFiles[index]) {
-      setSelectedFileIndex(index);
-      setShowReceiptModal(true);
+      const file = attachedFiles[index];
+      
+      // For PDF files, directly open with external app picker
+      if (file.fileType === 'pdf') {
+        openFileWithExternalApp(file);
+      } else {
+        // For images, show in modal
+        setSelectedFileIndex(index);
+        setShowReceiptModal(true);
+      }
+    }
+  };
+
+  const openFileWithExternalApp = async (file: OfflineFile) => {
+    try {
+      // Ensure file has proper extension for better app recognition
+      let fileUri = file.localUri;
+      const fileExtension = file.filename?.split('.').pop()?.toLowerCase();
+      
+      // For PDF files, ensure the URI has .pdf extension for better app recognition
+      if (file.fileType === 'pdf' && fileExtension !== 'pdf') {
+        const tempFileName = `${file.filename || 'document'}.pdf`;
+        const tempUri = `${FileSystem.cacheDirectory}${tempFileName}`;
+        
+        try {
+          await FileSystem.copyAsync({
+            from: file.localUri,
+            to: tempUri,
+          });
+          fileUri = tempUri;
+        } catch (copyError) {
+          console.warn('Could not copy file with proper extension, using original:', copyError);
+          fileUri = file.localUri;
+        }
+      }
+
+      if (Platform.OS === 'android') {
+        // For Android, use Sharing to show apps that can handle the file
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(fileUri, {
+            mimeType: file.mimeType || 'application/pdf',
+            dialogTitle: 'Open with...',
+          });
+        } else {
+          Alert.alert('Error', 'Unable to open file. File sharing is not available on this device.');
+        }
+      } else {
+        // For iOS, use Sharing which will try to open with default app
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(fileUri, {
+            mimeType: file.mimeType || 'application/pdf',
+            UTI: 'com.adobe.pdf',
+          });
+        } else {
+          Alert.alert('Error', 'Unable to open file. File sharing is not available on this device.');
+        }
+      }
+    } catch (error) {
+      console.error('Error opening file:', error);
+      Alert.alert(
+        'Error', 
+        'Unable to open the file. Please make sure you have a PDF viewer app installed.'
+      );
     }
   };
 
@@ -587,6 +650,7 @@ export const ExpenseDetailScreen: React.FC = () => {
                         </FileName>
                         <FileType>
                           {getFileTypeLabel(file.fileType)} • {(file.size / 1024).toFixed(1)} KB
+                          {file.fileType === 'pdf' && ' • Tap to open'}
                         </FileType>
                       </FileInfo>
                     </FileItem>
@@ -617,7 +681,7 @@ export const ExpenseDetailScreen: React.FC = () => {
         </DeleteButtonContainer>
       </ScrollView>
 
-      {/* File View Modal */}
+      {/* File View Modal - Only for images */}
       <Modal
         visible={showReceiptModal}
         transparent={true}
@@ -627,10 +691,10 @@ export const ExpenseDetailScreen: React.FC = () => {
         <ModalContainer>
           <ModalHeader>
             <ModalTitle>
-              {attachedFiles.length > 0 ? (
-                `${attachedFiles[selectedFileIndex]?.fileType === 'image' ? 'Image' : 'Document'} (${selectedFileIndex + 1}/${attachedFiles.length})`
+              {attachedFiles.length > 0 && attachedFiles[selectedFileIndex] ? (
+                `Image (${selectedFileIndex + 1}/${attachedFiles.filter(f => f.fileType === 'image').length})`
               ) : (
-                'File'
+                'Image'
               )}
             </ModalTitle>
             <ModalCloseButton onPress={() => setShowReceiptModal(false)}>
@@ -638,29 +702,11 @@ export const ExpenseDetailScreen: React.FC = () => {
             </ModalCloseButton>
           </ModalHeader>
           <ImageContainer>
-            {attachedFiles.length > 0 && attachedFiles[selectedFileIndex] && (
-              <>
-                {attachedFiles[selectedFileIndex].fileType === 'image' ? (
-                  <ReceiptImageFull 
-                    source={{ uri: attachedFiles[selectedFileIndex].localUri }} 
-                    resizeMode="contain"
-                  />
-                ) : (
-                  <View style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}>
-                    <Ionicons 
-                      name="document-text" 
-                      size={80} 
-                      color={colors.white} 
-                    />
-                    <ModalTitle style={{ marginTop: spacing.md, fontSize: typography.sizes.lg }}>
-                      {attachedFiles[selectedFileIndex].filename}
-                    </ModalTitle>
-                    <Text style={{ color: colors.white, marginTop: spacing.sm, textAlign: 'center' }}>
-                      PDF files cannot be previewed in the app
-                    </Text>
-                  </View>
-                )}
-              </>
+            {attachedFiles.length > 0 && attachedFiles[selectedFileIndex] && attachedFiles[selectedFileIndex].fileType === 'image' && (
+              <ReceiptImageFull 
+                source={{ uri: attachedFiles[selectedFileIndex].localUri }} 
+                resizeMode="contain"
+              />
             )}
           </ImageContainer>
         </ModalContainer>

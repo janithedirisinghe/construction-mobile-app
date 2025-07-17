@@ -54,9 +54,15 @@ const ModalOverlay = styled.View`
 const ModalContent = styled.View`
   background-color: ${colors.white};
   border-radius: ${borderRadius.xl}px;
-  width: 85%;
-  max-height: 70%;
+  width: 90%;
+  max-width: 400px;
+  max-height: 60%;
   overflow: hidden;
+  elevation: 8;
+  shadow-color: #000;
+  shadow-offset: 0px 4px;
+  shadow-opacity: 0.25;
+  shadow-radius: 8px;
 `;
 
 const ModalHeader = styled.View`
@@ -86,41 +92,27 @@ const CloseButton = styled.TouchableOpacity`
 const LanguageOption = styled.TouchableOpacity<{ isSelected: boolean }>`
   flex-direction: row;
   align-items: center;
-  padding: ${spacing.lg}px;
+  justify-content: space-between;
+  padding: ${spacing.lg}px ${spacing.xl}px;
   border-bottom-width: 1px;
   border-bottom-color: ${colors.gray[100]};
-  background-color: ${props => props.isSelected ? colors.primary + '10' : 'transparent'};
-`;
-
-const LanguageFlag = styled.View`
-  width: 48px;
-  height: 48px;
-  border-radius: ${borderRadius.md}px;
-  background-color: ${colors.primary};
-  justify-content: center;
-  align-items: center;
-  margin-right: ${spacing.md}px;
-`;
-
-const LanguageFlagText = styled.Text`
-  font-size: ${typography.sizes.lg}px;
-  font-weight: ${typography.weights.bold};
-  color: ${colors.white};
+  background-color: ${props => props.isSelected ? colors.primary + '08' : 'transparent'};
+  min-height: 64px;
 `;
 
 const LanguageInfo = styled.View`
   flex: 1;
 `;
 
-const LanguageName = styled.Text`
-  font-size: ${typography.sizes.md}px;
-  font-weight: ${typography.weights.semibold};
-  color: ${colors.gray[900]};
+const LanguageName = styled.Text<{ isSelected: boolean }>`
+  font-size: ${typography.sizes.lg}px;
+  font-weight: ${props => props.isSelected ? typography.weights.bold : typography.weights.medium};
+  color: ${props => props.isSelected ? colors.primary : colors.gray[900]};
 `;
 
-const LanguageNativeName = styled.Text`
-  font-size: ${typography.sizes.sm}px;
-  color: ${colors.gray[600]};
+const LanguageNativeName = styled.Text<{ isSelected: boolean }>`
+  font-size: ${typography.sizes.md}px;
+  color: ${props => props.isSelected ? colors.primary : colors.gray[600]};
   margin-top: ${spacing.xs}px;
 `;
 
@@ -141,15 +133,6 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({ style }) => 
   const handleLanguageSelect = async (language: Language) => {
     await changeLanguage(language);
     setModalVisible(false);
-  };
-
-  const getLanguageEmoji = (code: Language) => {
-    switch (code) {
-      case 'en': return '🇬🇧';
-      case 'si': return '🇱🇰';
-      case 'ta': return '🇱🇰';
-      default: return '🌐';
-    }
   };
 
   return (
@@ -189,14 +172,13 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({ style }) => 
                   isSelected={language.code === currentLanguage}
                   onPress={() => handleLanguageSelect(language.code)}
                 >
-                  <LanguageFlag>
-                    <LanguageFlagText>
-                      {getLanguageEmoji(language.code)}
-                    </LanguageFlagText>
-                  </LanguageFlag>
                   <LanguageInfo>
-                    <LanguageName>{language.name}</LanguageName>
-                    <LanguageNativeName>{language.nativeName}</LanguageNativeName>
+                    <LanguageName isSelected={language.code === currentLanguage}>
+                      {language.name}
+                    </LanguageName>
+                    <LanguageNativeName isSelected={language.code === currentLanguage}>
+                      {language.nativeName}
+                    </LanguageNativeName>
                   </LanguageInfo>
                   <CheckIcon isVisible={language.code === currentLanguage}>
                     <Ionicons name="checkmark" size={24} color={colors.primary} />

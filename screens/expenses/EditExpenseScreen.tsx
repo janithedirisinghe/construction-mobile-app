@@ -5,6 +5,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
 import { Screen } from '../../components/common/Screen';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
@@ -630,8 +632,69 @@ export const EditExpenseScreen: React.FC = () => {
 
   const handleViewFile = (index: number) => {
     if (attachedFiles[index]) {
-      setSelectedFileIndex(index);
-      setShowReceiptModal(true);
+      const file = attachedFiles[index];
+      
+      // For PDF files, directly open with external app picker
+      if (file.fileType === 'pdf') {
+        openFileWithExternalApp(file);
+      } else {
+        // For images, show in modal
+        setSelectedFileIndex(index);
+        setShowReceiptModal(true);
+      }
+    }
+  };
+
+  const openFileWithExternalApp = async (file: OfflineFile) => {
+    try {
+      // Ensure file has proper extension for better app recognition
+      let fileUri = file.localUri;
+      const fileExtension = file.filename?.split('.').pop()?.toLowerCase();
+      
+      // For PDF files, ensure the URI has .pdf extension for better app recognition
+      if (file.fileType === 'pdf' && fileExtension !== 'pdf') {
+        const tempFileName = `${file.filename || 'document'}.pdf`;
+        const tempUri = `${FileSystem.cacheDirectory}${tempFileName}`;
+        
+        try {
+          await FileSystem.copyAsync({
+            from: file.localUri,
+            to: tempUri,
+          });
+          fileUri = tempUri;
+        } catch (copyError) {
+          console.warn('Could not copy file with proper extension, using original:', copyError);
+          fileUri = file.localUri;
+        }
+      }
+
+      if (Platform.OS === 'android') {
+        // For Android, use Sharing to show apps that can handle the file
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(fileUri, {
+            mimeType: file.mimeType || 'application/pdf',
+            dialogTitle: 'Open with...',
+          });
+        } else {
+          Alert.alert('Error', 'Unable to open file. File sharing is not available on this device.');
+        }
+      } else {
+        // For iOS, use Sharing which will try to open with default app
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(fileUri, {
+            mimeType: file.mimeType || 'application/pdf',
+            UTI: 'com.adobe.pdf',
+          });
+        } else {
+          Alert.alert('Error', 'Unable to open file. File sharing is not available on this device.');
+        }
+      }
+    } catch (error) {
+      console.error('Error opening file:', error);
+      Alert.alert(
+        'Error', 
+        'Unable to open the file. Please make sure you have a PDF viewer app installed.'
+      );
     }
   };
 
@@ -791,6 +854,7 @@ export const EditExpenseScreen: React.FC = () => {
                         </FileName>
                         <FileType>
                           {getFileTypeLabel(file.fileType)} • {(file.size / 1024).toFixed(1)} KB
+                          {file.fileType === 'pdf' && ' • Tap to open'}
                         </FileType>
                       </FileInfo>
                       <RemoveFileButton onPress={() => handleRemoveFile(file.id)}>
@@ -832,7 +896,7 @@ export const EditExpenseScreen: React.FC = () => {
           </ActionButton>
         </ButtonContainer>
 
-        {/* File View Modal */}
+        {/* File View Modal - Only for images */}
         {showReceiptModal && attachedFiles.length > 0 && (
           <Modal
             visible={showReceiptModal}
@@ -843,8 +907,11 @@ export const EditExpenseScreen: React.FC = () => {
             <ModalContainer>
               <ModalHeader>
                 <ModalTitle>
-                  {attachedFiles[selectedFileIndex]?.fileType === 'image' ? 'Image' : 'Document'} 
-                  {` (${selectedFileIndex + 1}/${attachedFiles.length})`}
+                  {attachedFiles[selectedFileIndex] ? (
+                    `Image (${selectedFileIndex + 1}/${attachedFiles.filter(f => f.fileType === 'image').length})`
+                  ) : (
+                    'Image'
+                  )}
                 </ModalTitle>
                 <ModalCloseButton onPress={() => setShowReceiptModal(false)}>
                   <Ionicons name="close" size={24} color={colors.white} />
@@ -852,25 +919,11 @@ export const EditExpenseScreen: React.FC = () => {
               </ModalHeader>
 
               <ImageContainer>
-                {attachedFiles[selectedFileIndex]?.fileType === 'image' ? (
+                {attachedFiles[selectedFileIndex]?.fileType === 'image' && (
                   <ReceiptImageFull 
                     source={{ uri: attachedFiles[selectedFileIndex].localUri }} 
                     resizeMode="contain" 
                   />
-                ) : (
-                  <View style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}>
-                    <Ionicons 
-                      name="document-text" 
-                      size={80} 
-                      color={colors.white} 
-                    />
-                    <ModalTitle style={{ marginTop: spacing.md, fontSize: typography.sizes.lg }}>
-                      {attachedFiles[selectedFileIndex]?.filename}
-                    </ModalTitle>
-                    <Text style={{ color: colors.white, marginTop: spacing.sm, textAlign: 'center' }}>
-                      PDF files cannot be previewed in the app
-                    </Text>
-                  </View>
                 )}
               </ImageContainer>
             </ModalContainer>
