@@ -88,7 +88,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Navigate to ProjectList on successful login
-      navigation.navigate('ProjectList');
+      navigation.navigate('MainTabs');
     } catch (error) {
       Alert.alert('Login Failed', 'Please check your credentials and try again.');
     } finally {

@@ -13,6 +13,7 @@ import { colors, spacing, typography, borderRadius, shadows } from '../../theme'
 import { ProjectService } from '../../services/ProjectService';
 import { ExpenseService } from '../../services/ExpenseService';
 import { useFocusEffect } from '@react-navigation/native';
+import { useCurrency } from '../../contexts/CurrencyContext';
 
 interface Props {
   navigation: DashboardScreenNavigationProp;
@@ -300,6 +301,7 @@ const ExpenseCount = styled.Text`
 
 export const DashboardScreen: React.FC<Props> = ({ navigation, route }) => {
   const { projectId } = route.params;
+  const { getCurrencySymbol } = useCurrency();
   const [project, setProject] = useState<Project | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [totalExpensesCount, setTotalExpensesCount] = useState<number>(0);
@@ -348,7 +350,7 @@ export const DashboardScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const formatCurrency = (amount: number): string => {
-    return `LKR ${amount.toLocaleString()}`;
+    return `${getCurrencySymbol()} ${amount.toLocaleString()}`;
   };
 
   const formatDate = (dateString: string): string => {

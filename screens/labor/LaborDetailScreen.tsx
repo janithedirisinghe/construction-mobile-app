@@ -11,6 +11,7 @@ import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { colors, spacing, typography, borderRadius, shadows } from '../../theme';
 import { LaborService } from '../../services/LaborService';
+import { useCurrency } from '../../contexts/CurrencyContext';
 
 interface Props {
   navigation: LaborDetailScreenNavigationProp;
@@ -179,6 +180,7 @@ const LoadingText = styled.Text`
 
 export const LaborDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   const { laborId, projectId } = route.params;
+  const { getCurrencySymbol } = useCurrency();
   const [labor, setLabor] = useState<Labor | null>(null);
   const [attendanceStats, setAttendanceStats] = useState({
     totalDays: 0,
@@ -244,7 +246,7 @@ export const LaborDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const formatCurrency = (amount: number): string => {
-    return `LKR ${amount.toLocaleString()}`;
+    return `${getCurrencySymbol()} ${amount.toLocaleString()}`;
   };
 
   const formatDate = (dateString: string): string => {

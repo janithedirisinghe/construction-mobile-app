@@ -10,6 +10,7 @@ import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { colors, spacing, typography, borderRadius, shadows } from '../../theme';
 import { LaborService } from '../../services/LaborService';
+import { useCurrency } from '../../contexts/CurrencyContext';
 
 interface Props {
   navigation: DailyAttendanceScreenNavigationProp;
@@ -174,6 +175,7 @@ const EmptyText = styled.Text`
 
 export const DailyAttendanceScreen: React.FC<Props> = ({ navigation, route }) => {
   const { projectId } = route.params;
+  const { getCurrencySymbol } = useCurrency();
   const [laborers, setLaborers] = useState<Labor[]>([]);
   const [attendanceData, setAttendanceData] = useState<LaborAttendance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -226,7 +228,7 @@ export const DailyAttendanceScreen: React.FC<Props> = ({ navigation, route }) =>
   };
 
   const formatCurrency = (amount: number): string => {
-    return `LKR ${amount.toLocaleString()}`;
+    return `${getCurrencySymbol()} ${amount.toLocaleString()}`;
   };
 
   const toggleAttendance = (laborId: number) => {

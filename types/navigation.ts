@@ -24,6 +24,7 @@ export type RootStackParamList = {
   
   // Profile Screens
   EditProfile: undefined;
+  Settings: undefined;
   
   // Project Screens (accessible from Home tab)
   CreateProject: undefined;
@@ -63,6 +64,7 @@ export type ProfileScreenNavigationProp = CompositeNavigationProp<
 export type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
 export type RegisterScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Register'>;
 export type EditProfileScreenNavigationProp = StackNavigationProp<RootStackParamList, 'EditProfile'>;
+export type SettingsScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Settings'>;
 export type CreateProjectScreenNavigationProp = StackNavigationProp<RootStackParamList, 'CreateProject'>;
 export type EditProjectScreenNavigationProp = StackNavigationProp<RootStackParamList, 'EditProject'>;
 export type DashboardScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Dashboard'>;

@@ -5,6 +5,7 @@ import { AppNavigator } from './navigation/AppNavigator';
 import { SplashScreen } from './screens/SplashScreen';
 import { UserRegistrationScreen } from './screens/auth/UserRegistrationScreen';
 import { LanguageProvider } from './contexts/LanguageContext';
+import { CurrencyProvider } from './contexts/CurrencyContext';
 import { initializeDatabase } from './database';
 import { OfflineStorageService, UserService } from './services';
 import './i18n'; // Initialize i18n
@@ -63,8 +64,10 @@ export default function App() {
     return (
       <SafeAreaProvider>
         <LanguageProvider>
-          <UserRegistrationScreen onUserRegistered={handleUserRegistered} />
-          <StatusBar style="auto" />
+          <CurrencyProvider>
+            <UserRegistrationScreen onUserRegistered={handleUserRegistered} />
+            <StatusBar style="auto" />
+          </CurrencyProvider>
         </LanguageProvider>
       </SafeAreaProvider>
     );
@@ -73,8 +76,10 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <LanguageProvider>
-        <AppNavigator />
-        <StatusBar style="auto" />
+        <CurrencyProvider>
+          <AppNavigator />
+          <StatusBar style="auto" />
+        </CurrencyProvider>
       </LanguageProvider>
     </SafeAreaProvider>
   );

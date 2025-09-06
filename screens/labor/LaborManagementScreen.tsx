@@ -5,6 +5,7 @@ import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
+import { useCurrency } from '../../contexts/CurrencyContext';
 import { LaborManagementScreenNavigationProp, LaborManagementScreenRouteProp } from '../../types/navigation';
 import { Labor, LaborAttendance } from '../../types/labor';
 import { Screen } from '../../components/common/Screen';
@@ -229,6 +230,7 @@ const EmptyText = styled.Text`
 export const LaborManagementScreen: React.FC<Props> = ({ navigation, route }) => {
   const { projectId } = route.params;
   const { t } = useTranslation();
+  const { getCurrencySymbol } = useCurrency();
   const [activeTab, setActiveTab] = useState<'laborers' | 'attendance'>('laborers');
   const [laborers, setLaborers] = useState<Labor[]>([]);
   const [showInactive, setShowInactive] = useState(false);
@@ -285,7 +287,7 @@ export const LaborManagementScreen: React.FC<Props> = ({ navigation, route }) =>
   };
 
   const formatCurrency = (amount: number): string => {
-    return `LKR ${amount.toLocaleString()}`;
+    return `${getCurrencySymbol()} ${amount.toLocaleString()}`;
   };
 
   const toggleAttendance = (laborId: number) => {

@@ -5,6 +5,7 @@ import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
+import { useCurrency } from '../../contexts/CurrencyContext';
 import { HomeScreenNavigationProp } from '../../types/navigation';
 import { Project } from '../../types/project';
 import { User } from '../../types/auth';
@@ -190,6 +191,7 @@ const EmptyText = styled.Text`
 export const ProjectListScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const { t } = useTranslation();
+  const { getCurrencySymbol } = useCurrency();
   const [projects, setProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -251,7 +253,7 @@ export const ProjectListScreen: React.FC = () => {
   };
 
   const formatCurrency = (amount: number): string => {
-    return `LKR ${amount.toLocaleString()}`;
+    return `${getCurrencySymbol()} ${amount.toLocaleString()}`;
   };
 
   const calculateProgress = (spent: number, budget: number): number => {

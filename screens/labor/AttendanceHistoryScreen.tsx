@@ -11,6 +11,7 @@ import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { colors, spacing, typography, borderRadius, shadows } from '../../theme';
 import { LaborService } from '../../services/LaborService';
+import { useCurrency } from '../../contexts/CurrencyContext';
 
 interface Props {
   navigation: AttendanceHistoryScreenNavigationProp;
@@ -197,6 +198,7 @@ type FilterPeriod = 'week' | 'month' | 'all';
 
 export const AttendanceHistoryScreen: React.FC<Props> = ({ navigation, route }) => {
   const { projectId } = route.params;
+  const { getCurrencySymbol } = useCurrency();
   const [attendanceHistory, setAttendanceHistory] = useState<DailyLaborSummary[]>([]);
   const [laborList, setLaborList] = useState<Labor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -278,7 +280,7 @@ export const AttendanceHistoryScreen: React.FC<Props> = ({ navigation, route }) 
   };
 
   const formatCurrency = (amount: number): string => {
-    return `LKR ${amount.toLocaleString()}`;
+    return `${getCurrencySymbol()} ${amount.toLocaleString()}`;
   };
 
   const getLaborById = (laborId: number): Labor | undefined => {

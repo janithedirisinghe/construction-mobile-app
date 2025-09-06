@@ -13,6 +13,7 @@ import { MainTabNavigator } from './MainTabNavigator';
 
 // Profile Screens
 import { EditProfileScreen } from '../screens/profile/EditProfileScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 
 // Project Screens (accessible from Home tab)
 import { CreateProjectScreen } from '../screens/projects/CreateProjectScreen';
@@ -55,6 +56,7 @@ export const AppNavigator: React.FC = () => {
         
         {/* Profile Screens */}
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+        <Stack.Screen name="Settings" component={SettingsScreen} />
         
         {/* Project Screens (accessible from Home tab) */}
         <Stack.Screen name="CreateProject" component={CreateProjectScreen} />

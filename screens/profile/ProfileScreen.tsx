@@ -182,7 +182,7 @@ export const ProfileScreen: React.FC = () => {
   };
 
   const handleSettings = () => {
-    Alert.alert(t('profile.settings'), t('profile.settingsComingSoon'));
+    navigation.navigate('Settings' as any);
   };
 
   const handleHelp = () => {
