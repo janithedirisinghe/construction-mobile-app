@@ -134,45 +134,6 @@ const ProgressFill = styled.View<{ percentage: number; color?: string }>`
   border-radius: ${borderRadius.round}px;
 `;
 
-const CategoryContainer = styled.View`
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: ${spacing.sm}px;
-`;
-
-const CategoryItem = styled.View`
-  flex-direction: row;
-  align-items: center;
-  background-color: ${colors.gray[100]};
-  padding: ${spacing.sm}px ${spacing.md}px;
-  border-radius: ${borderRadius.md}px;
-  border-left-width: 4px;
-  border-left-color: ${colors.primary};
-`;
-
-const CategoryDot = styled.View<{ color: string }>`
-  width: 12px;
-  height: 12px;
-  border-radius: ${borderRadius.round}px;
-  background-color: ${props => props.color};
-  margin-right: ${spacing.sm}px;
-`;
-
-const CategoryInfo = styled.View`
-  flex: 1;
-`;
-
-const CategoryName = styled.Text`
-  font-size: ${typography.sizes.sm}px;
-  font-weight: ${typography.weights.medium};
-  color: ${colors.gray[900]};
-`;
-
-const CategoryAmount = styled.Text`
-  font-size: ${typography.sizes.xs}px;
-  color: ${colors.gray[600]};
-`;
-
 const RecentActivity = styled.View`
   margin-bottom: ${spacing.lg}px;
 `;
@@ -259,19 +220,7 @@ interface AnalyticsData {
   totalExpenses: number;
   avgExpenseAmount: number;
   recentExpenses: Expense[];
-  expensesByCategory: { [key: string]: number };
 }
-
-const CATEGORY_COLORS: { [key: string]: string } = {
-  'Materials': colors.primary,
-  'Labor': colors.success,
-  'Equipment': colors.warning,
-  'Equipment Rental': colors.info,
-  'Transport': colors.error,
-  'Permits': '#8B5CF6',
-  'Utilities': '#06B6D4',
-  'Other': colors.gray[500],
-};
 
 export const AnalyticsScreen: React.FC = () => {
   const navigation = useNavigation<AnalyticsScreenNavigationProp>();
@@ -315,16 +264,6 @@ export const AnalyticsScreen: React.FC = () => {
       const totalBudget = projects.reduce((sum, project) => sum + project.targetBudget, 0);
       const totalSpent = projects.reduce((sum, project) => sum + (project.totalSpent || 0), 0);
       
-      // Calculate expenses by category
-      const expensesByCategory: { [key: string]: number } = {};
-      expenses.forEach(expense => {
-        if (expensesByCategory[expense.category]) {
-          expensesByCategory[expense.category] += expense.amount;
-        } else {
-          expensesByCategory[expense.category] = expense.amount;
-        }
-      });
-
       const analyticsData: AnalyticsData = {
         totalProjects: projects.length,
         activeProjects: activeProjects.length,
@@ -335,8 +274,7 @@ export const AnalyticsScreen: React.FC = () => {
         totalExpenses: expenses.length,
         avgExpenseAmount: expenses.length > 0 ? 
           expenses.reduce((sum, e) => sum + e.amount, 0) / expenses.length : 0,
-        recentExpenses: expenses.slice(0, 5),
-        expensesByCategory,
+  recentExpenses: expenses.slice(0, 5),
       };
 
       setAnalyticsData(analyticsData);
@@ -512,26 +450,7 @@ export const AnalyticsScreen: React.FC = () => {
           </ChartSection>
         </Card>
 
-        <Card padding="large">
-          <ChartSection>
-            <SectionTitle>{t('analytics.expenseCategories')}</SectionTitle>
-            
-            <CategoryContainer>
-              {Object.entries(analyticsData.expensesByCategory)
-                .sort(([,a], [,b]) => (b as number) - (a as number))
-                .slice(0, 6)
-                .map(([category, amount]) => (
-                  <CategoryItem key={category}>
-                    <CategoryDot color={CATEGORY_COLORS[category] || colors.primary} />
-                    <CategoryInfo>
-                      <CategoryName>{category}</CategoryName>
-                      <CategoryAmount>{formatCurrency(amount as number)}</CategoryAmount>
-                    </CategoryInfo>
-                  </CategoryItem>
-                ))}
-            </CategoryContainer>
-          </ChartSection>
-        </Card>
+  {/* Expense category section removed as requested */}
 
         <Card padding="large">
           <RecentActivity>
